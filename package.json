@@ -9,14 +9,23 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "react": "19.2.0",
+    "bcryptjs": "^3.0.2",
+    "install": "^0.13.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide": "^0.548.0",
+    "lucide-react": "^0.548.0",
+    "mongoose": "^8.19.2",
+    "next": "16.0.0",
+    "nodemailer": "^7.0.10",
+    "npm": "^11.6.2",
+    "react": "^19.2.0",
     "react-dom": "19.2.0",
-    "next": "16.0.0"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "16.0.0"
+    "eslint-config-next": "16.0.0",
+    "tailwindcss": "^4"
   }
 }
