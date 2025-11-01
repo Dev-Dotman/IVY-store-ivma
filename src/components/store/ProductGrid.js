@@ -84,7 +84,7 @@ export default function ProductGrid({ products, customization, storeName, storeT
       <div>
         <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Products For You!</h3>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
           {products.map((product) => (
             <ProductCard
               key={product._id}

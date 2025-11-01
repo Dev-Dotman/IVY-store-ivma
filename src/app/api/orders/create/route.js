@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Order from "@/models/Order";
 import Cart from "@/models/Cart";
-import Customer from "@/models/Customer";
 import Inventory from "@/models/Inventory";
 import InventoryBatch from "@/models/InventoryBatch";
 import Store from "@/models/Store";
+import Customer from "@/models/Customer";
 import { verifyCustomerSession } from "@/lib/auth";
 
 export async function POST(request) {
@@ -139,6 +139,7 @@ export async function POST(request) {
       };
     }));
 
+    
     // Create order
     const order = new Order({
       customer: customerId,
@@ -209,6 +210,17 @@ export async function POST(request) {
         const storeTotal = storeItems.reduce((sum, item) => sum + item.subtotal, 0);
         await store.updateSalesMetrics(storeTotal);
       }
+
+      if (store.ivmaWebsite && store.ivmaWebsite.isEnabled) {
+          await Store.findByIdAndUpdate(storeId, {
+            $inc: {
+              'ivmaWebsite.metrics.totalOrders': 1
+            },
+            $set: {
+              'ivmaWebsite.metrics.lastVisit': new Date()
+            }
+          });
+        }
     }
 
     // Clear the cart

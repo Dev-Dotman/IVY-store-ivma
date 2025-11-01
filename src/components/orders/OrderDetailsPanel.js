@@ -1,6 +1,6 @@
 "use client";
 import { X, Package, MapPin, Phone, Calendar, Clock, CheckCircle, Truck, Box } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function OrderDetailsPanel({ 
   isOpen, 
@@ -10,6 +10,19 @@ export default function OrderDetailsPanel({
   secondaryColor = '#F3F4F6',
   currency = 'NGN'
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
   // Prevent body scroll when panel is open
   useEffect(() => {
     if (isOpen) {
@@ -81,23 +94,23 @@ export default function OrderDetailsPanel({
         onClick={onClose}
       />
 
-      {/* Panel with Store Colors */}
+      {/* Panel with responsive positioning */}
       <div
         className={`fixed top-0 right-0 h-full bg-white shadow-2xl transform transition-transform duration-300 ease-in-out z-50 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{
           width: 'min(600px, 100vw)',
-          right: isOpen ? '10px' : '0',
-          maxHeight: '95vh',
-          top: '2.5vh',
-          borderRadius: '16px'
+          right: isMobile ? '0' : (isOpen ? '10px' : '0'), // Remove margin on mobile
+          maxHeight: isMobile ? '100vh' : '95vh', // Full height on mobile
+          top: isMobile ? '0' : '2.5vh', // Start from top on mobile
+          borderRadius: isMobile ? '0' : '16px' // No border radius on mobile
         }}
       >
         <div className="flex flex-col h-full">
           {/* Header with Store Colors */}
           <div 
-            className="flex-shrink-0 px-6 py-4 border-b border-gray-200 bg-white rounded-t-2xl"
+            className={`flex-shrink-0 px-6 py-4 border-b border-gray-200 bg-white ${isMobile ? '' : 'rounded-t-2xl'}`}
             style={{ backgroundColor: `${primaryColor}05` }}
           >
             <div className="flex items-center justify-between">
@@ -333,7 +346,7 @@ export default function OrderDetailsPanel({
 
           {/* Footer Actions with Store Colors */}
           {order.canBeCancelled && (
-            <div className="flex-shrink-0 px-6 py-4 border-t border-gray-200 bg-white rounded-b-2xl">
+            <div className={`flex-shrink-0 px-6 py-4 border-t border-gray-200 bg-white ${isMobile ? '' : 'rounded-b-2xl'}`}>
               <button className="w-full py-3 border-2 border-red-300 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors text-sm">
                 Cancel Order
               </button>

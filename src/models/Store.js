@@ -481,6 +481,32 @@ storeSchema.methods.updateSalesMetrics = async function(saleAmount) {
   return await this.save();
 };
 
+storeSchema.methods.updateWebsiteMetrics = async function(views = 1, isOrder = false) {
+  this.ivmaWebsite.metrics.totalViews += views;
+  this.ivmaWebsite.metrics.monthlyViews += views;
+  this.ivmaWebsite.metrics.lastVisit = new Date();
+  
+  if (isOrder) {
+    this.ivmaWebsite.metrics.totalOrders += 1;
+  }
+  
+  return await this.save();
+};
+
+// New method specifically for order completion
+storeSchema.methods.recordWebsiteOrder = async function(orderAmount = 0) {
+  // Update both general sales metrics and website-specific metrics
+  this.totalSales += 1;
+  this.totalRevenue += orderAmount;
+  this.lastSaleDate = new Date();
+  
+  // Update website metrics
+  this.ivmaWebsite.metrics.totalOrders += 1;
+  this.ivmaWebsite.metrics.lastVisit = new Date();
+  
+  return await this.save();
+};
+
 storeSchema.methods.completeSetup = async function() {
   this.setupCompleted = true;
   return await this.save();

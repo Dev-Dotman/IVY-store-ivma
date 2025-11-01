@@ -157,7 +157,7 @@ const OrderSchema = new mongoose.Schema({
   // Order status
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
+    enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded','processed'],
     default: 'pending',
     index: true
   },
@@ -261,7 +261,7 @@ const OrderSchema = new mongoose.Schema({
     subtotal: Number,
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
+      enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'processed'],
       default: 'pending'
     },
     // Add store snapshot with social media

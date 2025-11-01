@@ -28,16 +28,14 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Get active batches for this product to confirm stock availability
-    const activeBatches = await InventoryBatch.find({
+    // Get ALL batches for this product (including potentially depleted ones)
+    const allBatches = await InventoryBatch.find({
       productId: id,
-      status: 'active',
-      quantityRemaining: { $gt: 0 }
+      status: 'active' // Only get active status batches
     })
-    .sort({ dateReceived: 1 }) // FIFO
+    .sort({ dateReceived: 1 }) // FIFO ordering
     .lean();
 
-    // Get the store/user information
     const store = await Store.findOne({ userId: product.userId }).lean();
 
     if (!store) {
@@ -47,21 +45,94 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Calculate total available quantity from batches
-    const totalBatchQuantity = activeBatches.reduce((sum, batch) => sum + batch.quantityRemaining, 0);
+    // Calculate actual remaining quantities and filter truly active batches
+    const activeBatches = allBatches
+      .map(batch => {
+        // Calculate actual remaining quantity
+        const actualQuantityRemaining = batch.quantityIn - batch.quantitySold;
+        return {
+          ...batch,
+          quantityRemaining: Math.max(0, actualQuantityRemaining) // Ensure non-negative
+        };
+      })
+      .filter(batch => batch.quantityRemaining > 0); // Only include batches with actual stock
 
-    // Prepare product data with batch information
-    const productData = {
+    // Calculate batch-based pricing and availability
+    let currentPrice = product.sellingPrice; // fallback to inventory price
+    let currentCostPrice = product.costPrice; // fallback to inventory cost
+    let totalAvailableQuantity = 0;
+    let priceRange = { min: null, max: null };
+    let hasBatches = activeBatches.length > 0;
+    let currentBatch = null;
+
+    if (hasBatches) {
+      // Calculate total available quantity from all truly active batches
+      totalAvailableQuantity = activeBatches.reduce((sum, batch) => sum + batch.quantityRemaining, 0);
+      
+      // Get current price from the FIRST batch that has actual stock (FIFO)
+      currentBatch = activeBatches[0]; // This is the oldest batch with stock
+      if (currentBatch) {
+        currentPrice = currentBatch.sellingPrice;
+        currentCostPrice = currentBatch.costPrice;
+      }
+      
+      // Calculate price range across all active batches
+      const prices = activeBatches.map(batch => batch.sellingPrice);
+      priceRange = {
+        min: Math.min(...prices),
+        max: Math.max(...prices)
+      };
+    } else {
+      // No active batches with stock, use inventory stock if batch system not in use
+      totalAvailableQuantity = product.quantityInStock;
+    }
+
+    // Prepare enhanced product data
+    const enhancedProduct = {
       ...product,
-      costPrice: undefined, // Remove cost price from client response
-      batches: activeBatches,
-      batchQuantity: totalBatchQuantity,
-      hasBatches: activeBatches.length > 0
+      // Override pricing with batch-based pricing
+      sellingPrice: currentPrice,
+      
+      // Override quantity with batch-based quantity
+      quantityInStock: totalAvailableQuantity,
+      
+      // Batch information - only include batches with actual stock
+      batches: activeBatches.map(batch => ({
+        _id: batch._id,
+        batchCode: batch.batchCode,
+        quantityIn: batch.quantityIn,
+        quantitySold: batch.quantitySold,
+        quantityRemaining: batch.quantityRemaining,
+        sellingPrice: batch.sellingPrice,
+        dateReceived: batch.dateReceived,
+        expiryDate: batch.expiryDate,
+        supplier: batch.supplier,
+        isExpired: batch.expiryDate ? new Date() > batch.expiryDate : false,
+        daysUntilExpiry: batch.expiryDate ? Math.ceil((batch.expiryDate - new Date()) / (1000 * 60 * 60 * 24)) : null,
+        isCurrentBatch: currentBatch ? batch._id.toString() === currentBatch._id.toString() : false
+      })),
+      
+      // Batch metadata
+      batchInfo: {
+        hasBatches,
+        totalBatches: activeBatches.length,
+        totalAvailableQuantity,
+        currentBatchId: currentBatch?._id,
+        currentBatchCode: currentBatch?.batchCode,
+        priceRange: hasBatches ? priceRange : null,
+        oldestBatchDate: hasBatches ? activeBatches[0]?.dateReceived : null,
+        newestBatchDate: hasBatches ? activeBatches[activeBatches.length - 1]?.dateReceived : null,
+        averagePrice: hasBatches ? activeBatches.reduce((sum, batch) => sum + batch.sellingPrice, 0) / activeBatches.length : currentPrice
+      },
+      
+      // Remove cost price from client response for security
+      costPrice: undefined,
+      batchCostPrice: undefined
     };
 
     return NextResponse.json({
       success: true,
-      product: productData,
+      product: enhancedProduct,
       store,
     });
   } catch (error) {

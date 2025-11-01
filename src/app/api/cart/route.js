@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { verifyCustomerSession } from "@/lib/auth";
 import Cart from "@/models/Cart";
+import Inventory from "@/models/Inventory";
 
 // GET - Get customer's cart
 export async function GET(request) {

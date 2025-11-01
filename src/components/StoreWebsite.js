@@ -1,10 +1,13 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import StoreHeader from "./store/StoreHeader";
+import StoreFooter from "./store/StoreFooter";
 import ProductCard from "./store/ProductCard";
+import ProductCardMobile from "./store/ProductCardMobile";
 import CategoryFilterModal from "./store/CategoryFilterModal";
 import PriceFilterModal from "./store/PriceFilterModal";
 import AvailabilityFilterModal from "./store/AvailabilityFilterModal";
+import MobileFilterDropdown from "./ui/MobileFilterDropdown";
 import { ChevronDown } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import useStoreStore from "@/stores/storeStore";
@@ -12,6 +15,7 @@ import useStoreStore from "@/stores/storeStore";
 export default function StoreWebsite({ store }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -31,6 +35,30 @@ export default function StoreWebsite({ store }) {
   // Get branding colors from store or use defaults
   const primaryColor = store.branding?.primaryColor || "#0D9488";
   const secondaryColor = store.branding?.secondaryColor || "#F3F4F6";
+
+  // Screen size detection function
+  const detectScreenSize = () => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768; // 768px is the md breakpoint in Tailwind
+    }
+    return false;
+  };
+
+  // Screen size detection effect
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(detectScreenSize());
+    };
+
+    // Set initial value
+    setIsMobile(detectScreenSize());
+
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Fetch inventory products
   useEffect(() => {
@@ -143,23 +171,109 @@ export default function StoreWebsite({ store }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <div className="min-h-screen bg-white relative">
       {/* Subtle Background Shapes */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      {!isMobile && ( <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-20 blur-3xl" style={{ backgroundColor: primaryColor }} />
         <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full opacity-20 blur-3xl" style={{ backgroundColor: primaryColor }} />
         <div className="absolute top-20 left-20 w-64 h-64 rounded-full opacity-15 blur-2xl" style={{ backgroundColor: secondaryColor }} />
         <div className="absolute top-1/2 -right-20 w-56 h-56 rounded-full opacity-15 blur-2xl" style={{ backgroundColor: primaryColor }} />
         <div className="absolute bottom-40 right-1/4 w-40 h-40 rounded-full opacity-10 blur-xl" style={{ backgroundColor: secondaryColor }} />
         <div className="absolute top-1/3 left-1/4 w-48 h-48 rounded-full opacity-10 blur-xl" style={{ backgroundColor: primaryColor }} />
-      </div>
+      </div> )}
 
       <StoreHeader store={store} />
 
-      <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 relative z-10">
+      <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 relative z-10 min-h-screen">
+        {/* Mobile Store Banner - Only visible on mobile */}
+        {isMobile && (
+          <div className="mb-6 -mx-6 relative rounded-xl overflow-hidden rounded-none">
+            {/* Banner Background */}
+            <div 
+              className="h-32 relative"
+              style={{
+                backgroundImage: store.branding?.banner 
+                  ? `url(${store.branding.banner})` 
+                  : `linear-gradient(135deg, ${primaryColor}20, ${primaryColor}40)`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundColor: store.branding?.banner ? 'transparent' : `${primaryColor}10`
+              }}
+            >
+              {/* Semi-transparent blur overlay */}
+              <div 
+                className="absolute inset-0 backdrop-blur-sm"
+                style={{ 
+                  backgroundColor: `${primaryColor}20`,
+                  backdropFilter: 'blur(8px) saturate(120%)'
+                }}
+              />
+              
+              {/* Store Info Overlay */}
+              <div className="absolute inset-0 flex flex-col justify-center px-6">
+                <div className="flex items-center gap-3 mb-2">
+                  {store.branding?.logo && (
+                    <img 
+                      src={store.branding.logo} 
+                      alt={store.storeName} 
+                      className="h-8 w-auto object-contain bg-white/20 backdrop-blur-sm rounded-lg p-1" 
+                    />
+                  )}
+                  <h1 className="text-xl font-bold text-white drop-shadow-lg">
+                    Welcome to {store.storeName}
+                  </h1>
+                </div>
+                
+                {store.storeDescription && (
+                  <p className="text-white/90 text-sm leading-relaxed drop-shadow-md line-clamp-2">
+                    {store.storeDescription}
+                  </p>
+                )}
+                
+                {/* Store Type Badge */}
+                <div className="mt-2">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm text-white border border-white/30">
+                    {store.storeType === 'physical' ? '🏪 Physical Store' : '🌐 Online Store'}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Decorative gradient overlay */}
+              <div 
+                className="absolute inset-0 opacity-30"
+                style={{
+                  background: `linear-gradient(45deg, ${primaryColor}60, transparent 70%)`
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Filters Bar */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
-          <div className="flex flex-wrap gap-2">
+          {/* Mobile Filter Dropdown - Only visible on mobile */}
+          {isMobile && ( <div className="w-full sm:hidden">
+            <MobileFilterDropdown
+              categoryOptions={categoryOptions}
+              priceOptions={priceOptions}
+              availabilityOptions={availabilityOptions}
+              selectedCategory={selectedCategory}
+              selectedPrice={selectedPrice}
+              selectedAvailability={selectedAvailability}
+              onCategorySelect={setSelectedCategory}
+              onPriceSelect={setSelectedPrice}
+              onAvailabilitySelect={setSelectedAvailability}
+              // Add modal trigger functions
+              onCategoryModalOpen={() => setShowCategoryModal(true)}
+              onPriceModalOpen={() => setShowPriceModal(true)}
+              onAvailabilityModalOpen={() => setShowAvailabilityModal(true)}
+              primaryColor={primaryColor}
+              secondaryColor={secondaryColor}
+            />
+          </div>)}
+
+          {/* Desktop Filter Buttons - Hidden on mobile */}
+          { !isMobile && ( <div className="flex flex-wrap gap-2">
             <button 
               onClick={() => {
                 console.log('Opening category modal');
@@ -193,14 +307,14 @@ export default function StoreWebsite({ store }) {
               {getAvailabilityLabel()}
               <ChevronDown className="w-4 h-4" />
             </button>
-          </div>
+          </div>)}
         </div>
 
         {/* Products Section */}
         <div>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 ">
             <h3 className="text-2xl font-semibold text-gray-900">
-              Products For You!
+              {isMobile ? 'Products' : ''}
             </h3>
             <span className="text-sm text-gray-600">
               {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
@@ -226,20 +340,37 @@ export default function StoreWebsite({ store }) {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className={`grid ${
+              isMobile 
+                ? 'grid-cols-2 gap-3' 
+                : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 '
+            }`}>
               {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product._id}
-                  product={product}
-                  primaryColor={primaryColor}
-                  secondaryColor={secondaryColor}
-                  currency={store.settings?.currency || "NGN"}
-                />
+                isMobile ? (
+                  <ProductCardMobile
+                    key={product._id}
+                    product={product}
+                    primaryColor={primaryColor}
+                    secondaryColor={secondaryColor}
+                    currency={store.settings?.currency || "NGN"}
+                  />
+                ) : (
+                  <ProductCard
+                    key={product._id}
+                    product={product}
+                    primaryColor={primaryColor}
+                    secondaryColor={secondaryColor}
+                    currency={store.settings?.currency || "NGN"}
+                  />
+                )
               ))}
             </div>
           )}
         </div>
       </main>
+
+      {/* Store Footer */}
+      <StoreFooter />
 
       {/* Filter Modals - Outside main to avoid z-index stacking context issues */}
       {/* Debug: Modal States */}

@@ -220,7 +220,7 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp }) {
           </form>
 
           {/* Social Login */}
-          <div className="mt-6">
+          {/* <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200"></div>
@@ -253,7 +253,7 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp }) {
                 Sign in with Google
               </span>
             </button>
-          </div>
+          </div> */}
 
           {/* Sign Up Link */}
           <div className="text-center mt-4 pt-4 border-t">

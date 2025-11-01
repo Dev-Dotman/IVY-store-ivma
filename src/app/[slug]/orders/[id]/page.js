@@ -197,60 +197,61 @@ export default function StoreOrderDetailsPage({ params }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 lg:py-12">
-      <div className="max-w-4xl mx-auto px-6">
-        {/* Success Header with Store Colors */}
-        <div className="text-center mb-8">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8 lg:py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        {/* Mobile-optimized Success Header */}
+        <div className="text-center mb-6 sm:mb-8">
           <div 
-            className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4"
             style={{ backgroundColor: `${primaryColor}20` }}
           >
-            <CheckCircle className="w-12 h-12" style={{ color: primaryColor }} />
+            <CheckCircle className="w-8 h-8 sm:w-12 sm:h-12" style={{ color: primaryColor }} />
           </div>
-          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
             Order Details
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-base sm:text-lg px-4">
             Thank you for shopping with {currentStore?.storeName || 'us'}
           </p>
         </div>
 
-        {/* Order Number & Status Card */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Order Number</p>
-              <p className="text-2xl font-bold text-gray-900">{order.orderNumber}</p>
+        {/* Mobile-optimized Order Number & Status Card */}
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col gap-3 sm:gap-4 mb-4">
+            <div className="text-center sm:text-left">
+              <p className="text-xs sm:text-sm text-gray-500 mb-1">Order Number</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{order.orderNumber}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <span className={`px-4 py-2 rounded-full font-semibold text-sm ${getStatusColor(order.status)}`}>
+            <div className="flex justify-center sm:justify-end">
+              <span className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-semibold text-xs sm:text-sm ${getStatusColor(order.status)}`}>
                 {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
               </span>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+          {/* Mobile: Stacked layout, Desktop: Grid */}
+          <div className="space-y-3 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-4 pt-4 border-t border-gray-100">
             <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-gray-400" />
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
               <div>
                 <p className="text-xs text-gray-500">Order Date</p>
                 <p className="text-sm font-medium text-gray-900">
-                  {formatDate(order.createdAt)}
+                  {new Date(order.createdAt).toLocaleDateString()}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Package className="w-5 h-5 text-gray-400" />
+              <Package className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
               <div>
                 <p className="text-xs text-gray-500">Total Items</p>
                 <p className="text-sm font-medium text-gray-900">{order.itemCount} items</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <ShoppingBag className="w-5 h-5 text-gray-400" />
+              <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
               <div>
                 <p className="text-xs text-gray-500">Total Amount</p>
-                <p className="text-lg font-bold" style={{ color: primaryColor }}>
+                <p className="text-base sm:text-lg font-bold" style={{ color: primaryColor }}>
                   {formatPrice(order.totalAmount)}
                 </p>
               </div>
@@ -258,42 +259,42 @@ export default function StoreOrderDetailsPage({ params }) {
           </div>
         </div>
 
-        {/* Shipping Address */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <MapPin className="w-5 h-5" />
+        {/* Mobile-optimized Shipping Address */}
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
+            <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
             Delivery Address
           </h2>
-          <div className="bg-gray-50 rounded-xl p-4">
-            <p className="font-semibold text-gray-900 mb-1">
+          <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4">
+            <p className="font-semibold text-gray-900 mb-1 text-sm sm:text-base">
               {order.shippingAddress.firstName} {order.shippingAddress.lastName}
             </p>
-            <p className="text-gray-600 text-sm mb-2">
+            <p className="text-gray-600 text-xs sm:text-sm mb-2">
               {order.shippingAddress.city}, {order.shippingAddress.state}
             </p>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Phone className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+              <Phone className="w-3 h-3 sm:w-4 sm:h-4" />
               <span>{order.shippingAddress.phone}</span>
             </div>
           </div>
         </div>
 
-        {/* Store Groups - Enhanced with Store Socials Modal */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Orders Sent To:</h2>
-          <div className="space-y-4">
+        {/* Mobile-optimized Store Groups */}
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Orders Sent To:</h2>
+          <div className="space-y-3 sm:space-y-4">
             {order.stores?.map((storeGroup, idx) => (
-              <div key={idx} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-3">
+              <div key={idx} className="border border-gray-200 rounded-lg sm:rounded-xl p-3 sm:p-4 hover:shadow-md transition-shadow">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 text-lg">
+                    <h3 className="font-semibold text-gray-900 text-base sm:text-lg">
                       {storeGroup.storeName}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
                       {storeGroup.itemCount} {storeGroup.itemCount === 1 ? 'item' : 'items'}
                     </p>
                     
-                    {/* Display available social media platforms */}
+                    {/* Mobile: Smaller social media indicators */}
                     {storeGroup.storeSnapshot?.onlineStoreInfo?.socialMedia && (
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-xs text-gray-400">Available on:</span>
@@ -302,8 +303,8 @@ export default function StoreOrderDetailsPage({ params }) {
                             .filter(([platform, handle]) => handle && handle.trim() !== '')
                             .slice(0, 3)
                             .map(([platform]) => (
-                              <div key={platform} className="w-4 h-4 rounded bg-gray-200 flex items-center justify-center">
-                                <span className="text-[8px] font-bold text-gray-600">
+                              <div key={platform} className="w-3 h-3 sm:w-4 sm:h-4 rounded bg-gray-200 flex items-center justify-center">
+                                <span className="text-[6px] sm:text-[8px] font-bold text-gray-600">
                                   {platform.charAt(0).toUpperCase()}
                                 </span>
                               </div>
@@ -316,22 +317,26 @@ export default function StoreOrderDetailsPage({ params }) {
                       </div>
                     )}
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-gray-900 mb-2">
-                      {formatPrice(storeGroup.subtotal)}
-                    </p>
-                    <span className={`inline-block mb-3 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(storeGroup.status)}`}>
-                      {storeGroup.status}
-                    </span>
+                  
+                  {/* Mobile: Stacked layout for price and actions */}
+                  <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 sm:gap-2">
+                    <div className="text-left sm:text-right">
+                      <p className="text-base sm:text-lg font-bold text-gray-900">
+                        {formatPrice(storeGroup.subtotal)}
+                      </p>
+                      <span className={`inline-block mt-1 px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(storeGroup.status)}`}>
+                        {storeGroup.status}
+                      </span>
+                    </div>
                     
-                    {/* Message Vendor Button - Now opens Store Socials Modal */}
+                    {/* Mobile: Smaller button */}
                     <button
                       onClick={() => handleMessageVendor(storeGroup)}
-                      className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium hover:opacity-90 transition-opacity text-sm"
+                      className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-white rounded-lg font-medium hover:opacity-90 transition-opacity text-xs sm:text-sm flex-shrink-0"
                       style={{ backgroundColor: '#25D366' }}
                     >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>Message Vendor</span>
+                      <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span>Message</span>
                     </button>
                   </div>
                 </div>
@@ -340,13 +345,14 @@ export default function StoreOrderDetailsPage({ params }) {
           </div>
         </div>
 
-        {/* Order Items */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Order Items</h2>
-          <div className="space-y-4">
+        {/* Mobile-optimized Order Items */}
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Order Items</h2>
+          <div className="space-y-3 sm:space-y-4">
             {order.items?.map((item, idx) => (
-              <div key={idx} className="flex gap-4 p-4 border border-gray-100 rounded-xl">
-                <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+              <div key={idx} className="flex gap-3 sm:gap-4 p-3 sm:p-4 border border-gray-100 rounded-lg sm:rounded-xl">
+                {/* Mobile: Smaller image */}
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                   {item.productSnapshot?.image ? (
                     <img 
                       src={item.productSnapshot.image} 
@@ -354,19 +360,19 @@ export default function StoreOrderDetailsPage({ params }) {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-2xl">
+                    <div className="w-full h-full flex items-center justify-center text-xl sm:text-2xl">
                       📦
                     </div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-gray-900 mb-1">
+                  <h4 className="font-semibold text-gray-900 mb-1 text-sm sm:text-base">
                     {item.productSnapshot?.productName}
                   </h4>
-                  <p className="text-sm text-gray-500 mb-2">
+                  <p className="text-xs sm:text-sm text-gray-500 mb-2">
                     Quantity: {item.quantity} × {formatPrice(item.price)}
                   </p>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-base sm:text-lg font-bold text-gray-900">
                     {formatPrice(item.subtotal)}
                   </p>
                 </div>
@@ -375,60 +381,60 @@ export default function StoreOrderDetailsPage({ params }) {
           </div>
         </div>
 
-        {/* Order Summary */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between text-gray-600">
+        {/* Mobile-optimized Order Summary */}
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">Order Summary</h2>
+          <div className="space-y-2 sm:space-y-3">
+            <div className="flex justify-between text-gray-600 text-sm sm:text-base">
               <span>Subtotal</span>
               <span className="font-semibold text-gray-900">{formatPrice(order.subtotal)}</span>
             </div>
             {order.discount > 0 && (
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-gray-600 text-sm sm:text-base">
                 <span>Discount</span>
                 <span className="font-semibold text-red-600">-{formatPrice(order.discount)}</span>
               </div>
             )}
             {order.shippingFee > 0 && (
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-gray-600 text-sm sm:text-base">
                 <span>Shipping Fee</span>
                 <span className="font-semibold text-gray-900">{formatPrice(order.shippingFee)}</span>
               </div>
             )}
-            <div className="border-t border-gray-200 pt-3 flex justify-between">
-              <span className="text-lg font-bold text-gray-900">Total</span>
-              <span className="text-2xl font-bold" style={{ color: primaryColor }}>
+            <div className="border-t border-gray-200 pt-2 sm:pt-3 flex justify-between">
+              <span className="text-base sm:text-lg font-bold text-gray-900">Total</span>
+              <span className="text-xl sm:text-2xl font-bold" style={{ color: primaryColor }}>
                 {formatPrice(order.totalAmount)}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Payment Information Card - Fixed */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Information</h3>
-          <div className="space-y-4">
+        {/* Mobile-optimized Payment Information */}
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Payment Information</h3>
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <p className="text-sm text-gray-500">Payment Method</p>
-              <p className="text-base font-medium text-gray-900">
+              <p className="text-xs sm:text-sm text-gray-500">Payment Method</p>
+              <p className="text-sm sm:text-base font-medium text-gray-900">
                 {order.paymentInfo?.method ? order.paymentInfo.method.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Cash to Vendor'}
               </p>
             </div>
             {order.paymentInfo?.transactionId && (
               <div>
-                <p className="text-sm text-gray-500">Transaction ID</p>
-                <p className="text-base font-medium text-gray-900">{order.paymentInfo.transactionId}</p>
+                <p className="text-xs sm:text-sm text-gray-500">Transaction ID</p>
+                <p className="text-sm sm:text-base font-medium text-gray-900 break-all">{order.paymentInfo.transactionId}</p>
               </div>
             )}
             {order.paymentInfo?.reference && (
               <div>
-                <p className="text-sm text-gray-500">Payment Reference</p>
-                <p className="text-base font-medium text-gray-900">{order.paymentInfo.reference}</p>
+                <p className="text-xs sm:text-sm text-gray-500">Payment Reference</p>
+                <p className="text-sm sm:text-base font-medium text-gray-900 break-all">{order.paymentInfo.reference}</p>
               </div>
             )}
             <div>
-              <p className="text-sm text-gray-500">Payment Status</p>
-              <p className="text-base font-medium text-gray-900">
+              <p className="text-xs sm:text-sm text-gray-500">Payment Status</p>
+              <p className="text-sm sm:text-base font-medium text-gray-900">
                 {order.paymentInfo?.status ? 
                   order.paymentInfo.status.charAt(0).toUpperCase() + order.paymentInfo.status.slice(1) : 
                   'Pending'
@@ -438,41 +444,43 @@ export default function StoreOrderDetailsPage({ params }) {
           </div>
         </div>
 
-        {/* Action Buttons with Store Colors */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        {/* Mobile-optimized Action Buttons */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
           <button
             onClick={() => router.push(`/${resolvedParams.slug}`)}
-            className="flex-1 py-4 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+            className="flex-1 py-3 sm:py-4 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             Back to Store
           </button>
           
-          {/* Contact All Vendors Button */}
+          {/* Contact All Vendors Button - Mobile: full width if multiple stores */}
           {order.stores?.length > 1 && (
             <button
               onClick={handleContactAllVendors}
-              className="flex-1 py-4 text-white rounded-xl font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-3 sm:py-4 text-white rounded-xl font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
               style={{ backgroundColor: '#25D366' }}
             >
-              <MessageCircle className="w-5 h-5" />
-              Contact All Vendors
+              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Contact All Vendors</span>
+              <span className="sm:hidden">Contact All</span>
             </button>
           )}
           
           <button
             onClick={() => router.push(`/${resolvedParams.slug}/orders`)}
-            className="flex-1 py-4 text-white rounded-xl font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2"
+            className="flex-1 py-3 sm:py-4 text-white rounded-xl font-semibold hover:opacity-90 transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
             style={{ backgroundColor: primaryColor }}
           >
-            <ShoppingBag className="w-5 h-5" />
-            View All Orders
+            <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">View All Orders</span>
+            <span className="sm:hidden">All Orders</span>
           </button>
         </div>
 
-        {/* Additional Info */}
-        <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-          <p className="text-sm text-blue-800">
+        {/* Mobile-optimized Additional Info */}
+        <div className="mt-6 sm:mt-8 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <p className="text-xs sm:text-sm text-blue-800">
             <strong>Note:</strong> You will receive order confirmations via WhatsApp from each store. 
             If you have any questions about your order, please contact the respective store directly using the message buttons above.
           </p>

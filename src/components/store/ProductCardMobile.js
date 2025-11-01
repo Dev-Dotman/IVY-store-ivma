@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Heart, MapPin, Tag } from 'lucide-react';
+import { Heart, Tag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function ProductCard({ product, primaryColor, currency, secondaryColor }) {
+export default function ProductCardMobile({ product, primaryColor, currency, secondaryColor }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
@@ -114,9 +114,9 @@ export default function ProductCard({ product, primaryColor, currency, secondary
   return (
     <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-200 group cursor-pointer"
          onClick={handleProductClick}>
-      {/* Image Container */}
-      <div className="p-4 md:p-0">
-        <div className="relative w-full aspect-square rounded-xl overflow-hidden"
+      {/* Image Container - No padding on mobile */}
+      <div className="p-0">
+        <div className="relative w-full aspect-square rounded-none overflow-hidden"
           style={{ 
             backgroundColor: secondaryColor || '#F3F4F6'
           }}
@@ -147,98 +147,57 @@ export default function ProductCard({ product, primaryColor, currency, secondary
             </>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-5xl">📦</span>
+              <span className="text-3xl">📦</span>
             </div>
           )}
           
-          {/* Stock Badge */}
+          {/* Stock Badge - Smaller for mobile */}
           {product.quantityInStock <= 0 && (
-            <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+            <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
               Out of Stock
             </div>
           )}
           {product.quantityInStock > 0 && product.quantityInStock <= product.reorderLevel && (
-            <div className="absolute top-3 left-3 bg-yellow-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+            <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
               Low Stock
             </div>
           )}
-
-          {/* Wishlist Button - Only show if user is authenticated */}
-          {/* {isAuthenticated && (
-            <button
-              onClick={handleWishlistToggle}
-              disabled={addingToWishlist || checkingWishlist}
-              className="absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:bg-white transition-all duration-200 disabled:opacity-50 hover:scale-110"
-            >
-              {addingToWishlist || checkingWishlist ? (
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Heart 
-                  className={`w-4 h-4 transition-all duration-200 ${liked ? 'fill-current scale-110' : ''}`}
-                  style={liked ? { color: primaryColor } : { color: '#6B7280' }}
-                  strokeWidth={liked ? 0 : 2}
-                  fill={liked ? primaryColor : 'none'}
-                />
-              )}
-            </button>
-          )} */}
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 pb-4">
-        {/* Title */}
-        <h3 className="text-xl font-semibold text-gray-900 mb-1 line-clamp-1">
+      {/* Content - Compact mobile padding */}
+      <div className="px-3 pb-3">
+        {/* Title - Smaller text for mobile */}
+        <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-1">
           {product.productName}
         </h3>
         
-        {/* Category */}
-        <p className="text-sm text-gray-500 mb-3">
+        {/* Category - Smaller text for mobile */}
+        <p className="text-xs text-gray-500 mb-2">
           {product.category}
         </p>
 
-        {/* Price and Location Row */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-900">
+        {/* Price Row - No location on mobile */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-1">
+            <Tag className="w-3 h-3 text-gray-500" />
+            <span className="text-xs font-medium text-gray-900">
              {formatPrice(product.sellingPrice)}
             </span>
           </div>
           
-          <div className="flex items-center gap-1.5 text-gray-500">
-            <MapPin className="w-4 h-4" />
-            <span className="text-sm">
-              {product.location || 'Store'}
-            </span>
-          </div>
-        </div>
-
-        {/* Buttons Row */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleProductClick();
-            }}
-            className="flex-1 py-2 bg-gray-900 text-white rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={product.quantityInStock <= 0}
-          >
-            {product.quantityInStock <= 0 ? 'Out of stock' : 'Add to Cart'}
-          </button>
-          
-          {/* Only show wishlist button in actions if user is authenticated */}
+          {/* Wishlist button moved to top right area */}
           {isAuthenticated && (
             <button
               onClick={handleWishlistToggle}
               disabled={addingToWishlist || checkingWishlist}
-              className="w-11 h-11 bg-gray-50 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50"
+              className="w-6 h-6 bg-gray-50 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50"
             >
               {addingToWishlist || checkingWishlist ? (
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                <div className="w-2.5 h-2.5 border border-gray-400 border-t-transparent rounded-full animate-spin" />
               ) : (
                 <Heart 
-                  className={`w-5 h-5 transition-all duration-200 ${liked ? 'fill-current scale-110' : 'text-gray-600'}`}
+                  className={`w-3 h-3 transition-all duration-200 ${liked ? 'fill-current scale-110' : 'text-gray-600'}`}
                   style={liked ? { color: primaryColor } : {}}
                   strokeWidth={liked ? 0 : 2}
                   fill={liked ? primaryColor : 'none'}
@@ -247,6 +206,18 @@ export default function ProductCard({ product, primaryColor, currency, secondary
             </button>
           )}
         </div>
+
+        {/* Single Button Row - Simplified for mobile */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleProductClick();
+          }}
+          className="w-full py-1 mb-2 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={product.quantityInStock <= 0}
+        >
+          {product.quantityInStock <= 0 ? 'Not Available' : 'Add to Cart'}
+        </button>
       </div>
 
       <style jsx>{`
