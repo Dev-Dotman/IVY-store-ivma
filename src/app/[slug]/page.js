@@ -4,6 +4,7 @@ import { use } from "react";
 import { useRouter } from "next/navigation";
 import StoreWebsite from "@/components/StoreWebsite";
 import useStoreStore from "@/stores/storeStore";
+import Head from "next/head";
 
 export default function StorePage({ params }) {
   const router = useRouter();
@@ -20,8 +21,11 @@ export default function StorePage({ params }) {
         
         if (!store) {
           console.log('Store not found, redirecting to 404');
-          // Could redirect to a 404 page or show not found message
           router.push('/404');
+        } else {
+          // Update favicon and metadata dynamically
+          updateFavicon(store.branding?.logo);
+          updateMetadata(store);
         }
       } catch (error) {
         console.error('Error loading store:', error);
@@ -34,6 +38,64 @@ export default function StorePage({ params }) {
       loadStore();
     }
   }, [resolvedParams.slug, fetchStore, router]);
+
+  const updateFavicon = (logoUrl) => {
+    if (!logoUrl) return;
+    
+    // Remove existing favicon
+    const existingFavicon = document.querySelector("link[rel*='icon']");
+    if (existingFavicon) {
+      existingFavicon.remove();
+    }
+    
+    // Add new favicon
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.href = logoUrl;
+    document.head.appendChild(link);
+  };
+
+  const updateMetadata = (store) => {
+    if (!store) return;
+    
+    const seoSettings = store.ivmaWebsite?.seoSettings || {};
+    const title = seoSettings.metaTitle || `${store.storeName} - Quality Products Online`;
+    const description = seoSettings.metaDescription || `Shop quality products at ${store.storeName}. ${store.storeDescription}`;
+    const keywords = seoSettings.keywords?.join(', ') || '';
+    
+    // Update document title
+    document.title = title;
+    
+    // Update or create meta tags
+    updateMetaTag('description', description);
+    if (keywords) {
+      updateMetaTag('keywords', keywords);
+    }
+    
+    // Update Open Graph tags
+    updateMetaTag('og:title', title, 'property');
+    updateMetaTag('og:description', description, 'property');
+    if (store.branding?.banner || store.branding?.logo) {
+      updateMetaTag('og:image', store.branding?.banner || store.branding?.logo, 'property');
+    }
+    
+    // Update Twitter Card tags
+    updateMetaTag('twitter:title', title);
+    updateMetaTag('twitter:description', description);
+    if (store.branding?.banner || store.branding?.logo) {
+      updateMetaTag('twitter:image', store.branding?.banner || store.branding?.logo);
+    }
+  };
+
+  const updateMetaTag = (name, content, attribute = 'name') => {
+    let element = document.querySelector(`meta[${attribute}="${name}"]`);
+    if (!element) {
+      element = document.createElement('meta');
+      element.setAttribute(attribute, name);
+      document.head.appendChild(element);
+    }
+    element.setAttribute('content', content);
+  };
 
   // Show loading state
   if (initialLoading || isLoading) {

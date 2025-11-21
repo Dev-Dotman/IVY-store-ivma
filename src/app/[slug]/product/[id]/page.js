@@ -42,6 +42,9 @@ export default function ProductDetailsPage({ params }) {
 
         if (data.success) {
           setProduct(data.product);
+          // Update favicon and metadata when product is loaded
+          updateProductFavicon(data.product.image);
+          updateProductMetadata(data.product);
         }
       } catch (error) {
         console.error("Error fetching product:", error);
@@ -54,6 +57,136 @@ export default function ProductDetailsPage({ params }) {
       fetchProduct();
     }
   }, [resolvedParams.id]);
+
+  // Update favicon for product
+  const updateProductFavicon = (productImage) => {
+    if (!productImage) return;
+    
+    // Remove existing favicon
+    const existingFavicon = document.querySelector("link[rel*='icon']");
+    if (existingFavicon) {
+      existingFavicon.remove();
+    }
+    
+    // Add new favicon with product image
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.href = productImage;
+    document.head.appendChild(link);
+  };
+
+  // Update metadata for product
+  const updateProductMetadata = (product) => {
+    if (!product) return;
+    
+    const storeName = currentStore?.storeName || 'Store';
+    const title = `${product.productName} - ${storeName}`;
+    const description = product.description 
+      ? `${product.description.substring(0, 155)}...` 
+      : `Buy ${product.productName} at ${storeName}. Category: ${product.category}. Price: ${formatPrice(product.sellingPrice)}`;
+    const keywords = [
+      product.productName,
+      product.category,
+      product.brand,
+      storeName,
+      'buy online',
+      'shop'
+    ].filter(Boolean).join(', ');
+    
+    // Update document title
+    document.title = title;
+    
+    // Update or create meta tags
+    updateMetaTag('description', description);
+    updateMetaTag('keywords', keywords);
+    
+    // Update Open Graph tags for social sharing
+    updateMetaTag('og:title', title, 'property');
+    updateMetaTag('og:description', description, 'property');
+    updateMetaTag('og:type', 'product', 'property');
+    if (product.image) {
+      updateMetaTag('og:image', product.image, 'property');
+    }
+    updateMetaTag('og:url', window.location.href, 'property');
+    
+    // Product-specific Open Graph tags
+    updateMetaTag('product:price:amount', product.sellingPrice.toString(), 'property');
+    updateMetaTag('product:price:currency', currentStore?.settings?.currency || 'NGN', 'property');
+    if (product.quantityInStock > 0) {
+      updateMetaTag('product:availability', 'in stock', 'property');
+    } else {
+      updateMetaTag('product:availability', 'out of stock', 'property');
+    }
+    updateMetaTag('product:category', product.category, 'property');
+    if (product.brand) {
+      updateMetaTag('product:brand', product.brand, 'property');
+    }
+    
+    // Update Twitter Card tags
+    updateMetaTag('twitter:card', 'summary_large_image');
+    updateMetaTag('twitter:title', title);
+    updateMetaTag('twitter:description', description);
+    if (product.image) {
+      updateMetaTag('twitter:image', product.image);
+    }
+    
+    // Add structured data (JSON-LD) for rich snippets
+    addStructuredData(product, storeName);
+  };
+
+  const updateMetaTag = (name, content, attribute = 'name') => {
+    let element = document.querySelector(`meta[${attribute}="${name}"]`);
+    if (!element) {
+      element = document.createElement('meta');
+      element.setAttribute(attribute, name);
+      document.head.appendChild(element);
+    }
+    element.setAttribute('content', content);
+  };
+
+  // Add structured data for SEO
+  const addStructuredData = (product, storeName) => {
+    // Remove existing structured data
+    const existingScript = document.querySelector('script[type="application/ld+json"]');
+    if (existingScript) {
+      existingScript.remove();
+    }
+    
+    const structuredData = {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": product.productName,
+      "image": product.image || '',
+      "description": product.description || `${product.productName} available at ${storeName}`,
+      "sku": product.sku,
+      "brand": {
+        "@type": "Brand",
+        "name": product.brand || storeName
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": window.location.href,
+        "priceCurrency": currentStore?.settings?.currency || 'NGN',
+        "price": product.sellingPrice,
+        "availability": product.quantityInStock > 0 
+          ? "https://schema.org/InStock" 
+          : "https://schema.org/OutOfStock",
+        "seller": {
+          "@type": "Organization",
+          "name": storeName
+        }
+      }
+    };
+    
+    if (product.category) {
+      structuredData.category = product.category;
+    }
+    
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(structuredData);
+    document.head.appendChild(script);
+  };
 
   // Check if item is in user's wishlist when component mounts
   useEffect(() => {
