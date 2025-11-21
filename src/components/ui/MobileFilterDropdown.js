@@ -84,7 +84,7 @@ export default function MobileFilterDropdown({
   const activeFiltersCount = getActiveFiltersCount();
 
   return (
-    <div className="relative sm:hidden" ref={dropdownRef}>
+    <div className="relative sm:hidden z-50" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:opacity-90 transition-colors w-full justify-between"
@@ -106,7 +106,7 @@ export default function MobileFilterDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-[100] max-h-96 overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900">Filter Products</h3>
@@ -131,7 +131,7 @@ export default function MobileFilterDropdown({
                 <p className="font-medium text-gray-900">Category</p>
                 <p className="text-sm text-gray-500">{getCategoryLabel()}</p>
               </div>
-              {/* <ChevronDown className="w-4 h-4 text-gray-400" /> */}
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </button>
 
             {/* Price Filter */}
@@ -143,7 +143,7 @@ export default function MobileFilterDropdown({
                 <p className="font-medium text-gray-900">Price Range</p>
                 <p className="text-sm text-gray-500">{getPriceLabel()}</p>
               </div>
-              {/* <ChevronDown className="w-4 h-4 text-gray-400" /> */}
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </button>
 
             {/* Availability Filter */}
@@ -155,7 +155,7 @@ export default function MobileFilterDropdown({
                 <p className="font-medium text-gray-900">Availability</p>
                 <p className="text-sm text-gray-500">{getAvailabilityLabel()}</p>
               </div>
-              {/* <ChevronDown className="w-4 h-4 text-gray-400" /> */}
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </button>
           </div>
         </div>

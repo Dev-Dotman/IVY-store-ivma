@@ -89,23 +89,31 @@ export function CartProvider({ children }) {
   };
 
   const removeFromCart = async (productId) => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      throw new Error('Authentication required');
+    }
 
     try {
-      const response = await fetch(`/api/cart/items/${productId}`, {
-        method: "DELETE",
+      console.log('Removing item from cart:', productId);
+      
+      const response = await fetch(`/api/cart/${productId}`, {
+        method: 'DELETE',
         credentials: 'include'
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
+        console.log('Item removed successfully');
         setCart(data.cart);
         return { success: true };
+      } else {
+        console.error('Failed to remove item:', data.message);
+        throw new Error(data.message || 'Failed to remove item from cart');
       }
     } catch (error) {
-      console.error("Error removing from cart:", error);
-      return { success: false, error: "Failed to remove item" };
+      console.error('Error removing from cart:', error);
+      throw error;
     }
   };
 

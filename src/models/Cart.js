@@ -346,8 +346,19 @@ cartSchema.statics.getCartStatsByStore = async function(storeId) {
 };
 
 // Instance methods - Updated
-cartSchema.methods.addItem = async function(productData) {
-  const { product, quantity, price, store, productSnapshot, storeSnapshot, notes } = productData;
+cartSchema.methods.recalculateSubtotal = function() {
+  this.subtotal = this.items.reduce((sum, item) => {
+    return sum + (item.price * item.quantity);
+  }, 0);
+  
+  // Recalculate total
+  this.total = this.subtotal + (this.shipping || 0) - (this.discount || 0);
+  
+  return this.subtotal;
+};
+
+cartSchema.methods.addItem = async function(productData, quantity = 1) {
+  const { product, price, store, productSnapshot, storeSnapshot, notes } = productData;
   
   // Check if item already exists in cart
   const existingItemIndex = this.items.findIndex(
@@ -381,12 +392,13 @@ cartSchema.methods.addItem = async function(productData) {
   return await this.save();
 };
 
-cartSchema.methods.removeItem = async function(productId) {
-  this.items = this.items.filter(
-    item => item.product.toString() !== productId.toString()
+cartSchema.methods.removeItem = function(productId) {
+  this.items = this.items.filter(item => 
+    (item.product._id || item.product).toString() !== productId.toString()
   );
   
-  return await this.save();
+  this.recalculateSubtotal();
+  return this;
 };
 
 cartSchema.methods.updateItemQuantity = async function(productId, newQuantity) {

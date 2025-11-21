@@ -1,98 +1,79 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
-const useStoreStore = create(
-  persist(
-    (set, get) => ({
-      // Store state
-      currentStore: null,
-      isLoading: false,
-      error: null,
-      
-      // Actions
-      setStore: (store) => set({ 
-        currentStore: store, 
-        error: null 
-      }),
-      
-      setLoading: (loading) => set({ isLoading: loading }),
-      
-      setError: (error) => set({ error }),
-      
-      clearStore: () => set({ 
-        currentStore: null, 
-        error: null,
-        isLoading: false 
-      }),
-      
-      // Fetch store by slug
-      fetchStore: async (slug) => {
-        set({ isLoading: true, error: null });
-        
-        try {
-          const response = await fetch(`/api/stores/public/${slug}`);
-          const data = await response.json();
-          
-          if (response.ok && data.success) {
-            set({ 
-              currentStore: data.store, 
-              isLoading: false,
-              error: null 
-            });
-            return data.store;
-          } else {
-            set({ 
-              error: data.message || 'Store not found',
-              isLoading: false,
-              currentStore: null 
-            });
-            return null;
-          }
-        } catch (error) {
-          console.error('Error fetching store:', error);
-          set({ 
-            error: 'Failed to load store',
-            isLoading: false,
-            currentStore: null 
-          });
-          return null;
-        }
-      },
-      
-      // Update store colors
-      updateStoreColors: (primaryColor, secondaryColor) => {
-        const currentStore = get().currentStore;
-        if (currentStore) {
-          set({
-            currentStore: {
-              ...currentStore,
-              branding: {
-                ...currentStore.branding,
-                primaryColor,
-                secondaryColor
-              }
-            }
-          });
-        }
-      },
-      
-      // Get store colors with fallbacks
-      getStoreColors: () => {
-        const store = get().currentStore;
-        return {
-          primaryColor: store?.branding?.primaryColor || '#0D9488',
-          secondaryColor: store?.branding?.secondaryColor || '#F3F4F6',
-          currency: store?.settings?.currency || 'NGN'
-        };
-      }
-    }),
-    {
-      name: 'ivma-store-storage',
-      partialize: (state) => ({ 
-        currentStore: state.currentStore 
-      })
+const useStoreStore = create((set, get) => ({
+  currentStore: null,
+  isLoading: false,
+  error: null,
+
+  setStore: (store) => set({ currentStore: store, error: null }),
+
+  fetchStore: async (websitePath) => {
+    if (!websitePath) return;
+
+    const { currentStore } = get();
+    
+    // Don't fetch if we already have the correct store
+    if (currentStore?.ivmaWebsite?.websitePath === websitePath) {
+      return currentStore;
     }
-  )
-);
+
+    set({ isLoading: true, error: null });
+
+    try {
+      console.log('Fetching store for path:', websitePath);
+      
+      // Use the public endpoint
+      const response = await fetch(`/api/stores/public/${websitePath}`);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('Store fetched successfully:', data.store.storeName);
+        set({ 
+          currentStore: data.store, 
+          isLoading: false, 
+          error: null 
+        });
+        return data.store;
+      } else {
+        console.error('Failed to fetch store:', data.message);
+        set({ 
+          currentStore: null, 
+          isLoading: false, 
+          error: data.message || 'Store not found' 
+        });
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching store:', error);
+      set({ 
+        currentStore: null, 
+        isLoading: false, 
+        error: 'Failed to load store' 
+      });
+      return null;
+    }
+  },
+
+  clearStore: () => set({ currentStore: null, error: null }),
+
+  updateStoreMetrics: async (views = 1, isOrder = false) => {
+    const { currentStore } = get();
+    if (!currentStore) return;
+
+    try {
+      // This could be a separate endpoint for analytics
+      await fetch(`/api/stores/public/${currentStore.ivmaWebsite.websitePath}/metrics`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ views, isOrder }),
+      });
+    } catch (error) {
+      console.log('Failed to update store metrics:', error);
+      // Don't throw error, just log it
+    }
+  }
+}));
 
 export default useStoreStore;

@@ -248,7 +248,7 @@ export default function StoreOrdersPage({ params }) {
                     </div>
 
                     <div className="text-right flex gap-3">
-                      <button
+                      {/* <button
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(`/${resolvedParams.slug}/orders/${order._id}`);
@@ -257,7 +257,7 @@ export default function StoreOrdersPage({ params }) {
                         style={{ backgroundColor: primaryColor }}
                       >
                         Full Details
-                      </button>
+                      </button> */}
                       {order.canBeCancelled && (
                         <button 
                           onClick={(e) => e.stopPropagation()}

@@ -1,5 +1,7 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { gsap } from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import StoreHeader from "./store/StoreHeader";
 import StoreFooter from "./store/StoreFooter";
 import ProductCard from "./store/ProductCard";
@@ -11,6 +13,11 @@ import MobileFilterDropdown from "./ui/MobileFilterDropdown";
 import { ChevronDown } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import useStoreStore from "@/stores/storeStore";
+
+// Register GSAP plugins
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 export default function StoreWebsite({ store }) {
   const [products, setProducts] = useState([]);
@@ -170,25 +177,342 @@ export default function StoreWebsite({ store }) {
     return option?.label || "Availability";
   };
 
+  // Animation refs
+  const mainRef = useRef(null);
+  const bannerRef = useRef(null);
+  const filtersRef = useRef(null);
+  const productsGridRef = useRef(null);
+  const backgroundShapesRef = useRef(null);
+  const loadingRef = useRef(null);
+  const emptyStateRef = useRef(null);
+
+  // GSAP Animation Effects
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const ctx = gsap.context(() => {
+      // Initial page load animation
+      const tl = gsap.timeline();
+
+      // Animate background shapes on desktop
+      if (!isMobile && backgroundShapesRef.current) {
+        gsap.set(backgroundShapesRef.current.children, { 
+          scale: 0,
+          opacity: 0 
+        });
+        
+        gsap.to(backgroundShapesRef.current.children, {
+          scale: 1,
+          opacity: 1,
+          duration: 2,
+          stagger: 0.2,
+          ease: "back.out(1.7)"
+        });
+
+        // Floating animation for background shapes
+        gsap.to(backgroundShapesRef.current.children, {
+          y: "random(-20, 20)",
+          x: "random(-10, 10)",
+          rotation: "random(-5, 5)",
+          duration: "random(3, 6)",
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut",
+          stagger: {
+            amount: 1,
+            from: "random"
+          }
+        });
+      }
+
+      // Mobile banner animation
+      if (isMobile && bannerRef.current) {
+        gsap.fromTo(bannerRef.current, 
+          { 
+            y: -100,
+            opacity: 0,
+            scale: 0.95
+          },
+          { 
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 1,
+            ease: "back.out(1.7)",
+            delay: 0.3
+          }
+        );
+
+        // Animate banner content
+        const bannerContent = bannerRef.current.querySelector('.banner-content');
+        if (bannerContent) {
+          gsap.fromTo(bannerContent.children,
+            {
+              y: 30,
+              opacity: 0
+            },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.8,
+              stagger: 0.1,
+              delay: 0.8,
+              ease: "power2.out"
+            }
+          );
+        }
+      }
+
+      // Filters animation
+      if (filtersRef.current) {
+        gsap.fromTo(filtersRef.current.children,
+          {
+            y: 50,
+            opacity: 0,
+            scale: 0.8
+          },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 0.6,
+            stagger: 0.1,
+            delay: isMobile ? 1.2 : 0.5,
+            ease: "back.out(1.7)"
+          }
+        );
+      }
+
+    }, mainRef);
+
+    return () => ctx.revert();
+  }, [isMobile]);
+
+  // Products grid animation
+  useEffect(() => {
+    if (typeof window === "undefined" || loading || !productsGridRef.current) return;
+
+    const ctx = gsap.context(() => {
+      const productCards = productsGridRef.current.children;
+      
+      if (productCards.length === 0) return;
+
+      // Reset any existing animations
+      gsap.set(productCards, { 
+        y: 30,
+        opacity: 0
+      });
+
+      // Animate products in - NO STAGGER, all at once
+      gsap.to(productCards, {
+        y: 0,
+        opacity: 1,
+        duration: 0.6,
+        ease: "power2.out",
+        delay: 0.2
+      });
+
+      // Add hover animations for desktop
+      if (!isMobile) {
+        Array.from(productCards).forEach((card) => {
+          const handleMouseEnter = () => {
+            gsap.to(card, {
+              y: -5,
+              scale: 1.02,
+              duration: 0.3,
+              ease: "power2.out"
+            });
+          };
+
+          const handleMouseLeave = () => {
+            gsap.to(card, {
+              y: 0,
+              scale: 1,
+              duration: 0.3,
+              ease: "power2.out"
+            });
+          };
+
+          card.addEventListener('mouseenter', handleMouseEnter);
+          card.addEventListener('mouseleave', handleMouseLeave);
+
+          // Cleanup
+          return () => {
+            card.removeEventListener('mouseenter', handleMouseEnter);
+            card.removeEventListener('mouseleave', handleMouseLeave);
+          };
+        });
+      }
+
+      // Scroll-triggered animations for products - simplified
+      ScrollTrigger.batch(productCards, {
+        onEnter: (elements) => {
+          gsap.fromTo(elements,
+            {
+              y: 20,
+              opacity: 0.8
+            },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.4,
+              ease: "power2.out"
+            }
+          );
+        },
+        onLeave: (elements) => {
+          gsap.to(elements, {
+            opacity: 0.9,
+            duration: 0.2
+          });
+        },
+        onEnterBack: (elements) => {
+          gsap.to(elements, {
+            opacity: 1,
+            duration: 0.2
+          });
+        }
+      });
+
+    }, productsGridRef);
+
+    return () => ctx.revert();
+  }, [filteredProducts, loading, isMobile]);
+
+  // Loading animation
+  useEffect(() => {
+    if (typeof window === "undefined" || !loading || !loadingRef.current) return;
+
+    const ctx = gsap.context(() => {
+      // Spinner animation
+      const spinner = loadingRef.current.querySelector('.loading-spinner');
+      if (spinner) {
+        gsap.to(spinner, {
+          rotation: 360,
+          duration: 1,
+          repeat: -1,
+          ease: "none"
+        });
+      }
+
+      // Pulsing text animation
+      const loadingText = loadingRef.current.querySelector('.loading-text');
+      if (loadingText) {
+        gsap.to(loadingText, {
+          opacity: 0.5,
+          duration: 1,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut"
+        });
+      }
+
+    }, loadingRef);
+
+    return () => ctx.revert();
+  }, [loading]);
+
+  // Empty state animation
+  useEffect(() => {
+    if (typeof window === "undefined" || loading || filteredProducts.length > 0 || !emptyStateRef.current) return;
+
+    const ctx = gsap.context(() => {
+      const elements = emptyStateRef.current.children;
+      
+      gsap.fromTo(elements,
+        {
+          y: 50,
+          opacity: 0,
+          scale: 0.8
+        },
+        {
+          y: 0,
+          opacity: 1,
+          scale: 1,
+          duration: 0.8,
+          stagger: 0.2,
+          ease: "back.out(1.7)"
+        }
+      );
+
+      // Floating animation for emoji
+      const emoji = emptyStateRef.current.querySelector('.empty-emoji');
+      if (emoji) {
+        gsap.to(emoji, {
+          y: -20,
+          duration: 2,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut"
+        });
+      }
+
+    }, emptyStateRef);
+
+    return () => ctx.revert();
+  }, [filteredProducts, loading]);
+
+  // Filter animation when filters change - simplified
+  useEffect(() => {
+    if (typeof window === "undefined" || loading) return;
+
+    const ctx = gsap.context(() => {
+      // Animate filter change - NO STAGGER
+      if (productsGridRef.current) {
+        const productCards = productsGridRef.current.children;
+        
+        if (productCards.length > 0) {
+          // Quick fade out and in effect
+          gsap.to(productCards, {
+            opacity: 0.6,
+            scale: 0.98,
+            duration: 0.15,
+            ease: "power2.inOut",
+            onComplete: () => {
+              gsap.to(productCards, {
+                opacity: 1,
+                scale: 1,
+                duration: 0.3,
+                ease: "back.out(1.7)"
+              });
+            }
+          });
+        }
+      }
+    }, productsGridRef);
+
+    return () => ctx.revert();
+  }, [selectedCategory, selectedPrice, selectedAvailability]);
+
+  // Cleanup ScrollTrigger on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined") {
+        ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      }
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-white relative">
-      {/* Subtle Background Shapes */}
-      {!isMobile && ( <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-20 blur-3xl" style={{ backgroundColor: primaryColor }} />
-        <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full opacity-20 blur-3xl" style={{ backgroundColor: primaryColor }} />
-        <div className="absolute top-20 left-20 w-64 h-64 rounded-full opacity-15 blur-2xl" style={{ backgroundColor: secondaryColor }} />
-        <div className="absolute top-1/2 -right-20 w-56 h-56 rounded-full opacity-15 blur-2xl" style={{ backgroundColor: primaryColor }} />
-        <div className="absolute bottom-40 right-1/4 w-40 h-40 rounded-full opacity-10 blur-xl" style={{ backgroundColor: secondaryColor }} />
-        <div className="absolute top-1/3 left-1/4 w-48 h-48 rounded-full opacity-10 blur-xl" style={{ backgroundColor: primaryColor }} />
-      </div> )}
+    <div className="min-h-screen bg-white relative" >
+      {/* Animated Background Shapes */}
+      {!isMobile && (
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" >
+          <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-20 blur-3xl" style={{ backgroundColor: secondaryColor }} />
+          <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full opacity-20 blur-3xl" style={{ backgroundColor: secondaryColor }} />
+          <div className="absolute top-20 left-20 w-64 h-64 rounded-full opacity-15 blur-2xl" style={{ backgroundColor: secondaryColor }} />
+          <div className="absolute top-1/2 -right-20 w-56 h-56 rounded-full opacity-15 blur-2xl" style={{ backgroundColor: secondaryColor }} />
+          <div className="absolute bottom-40 right-1/4 w-40 h-40 rounded-full opacity-10 blur-xl" style={{ backgroundColor: secondaryColor }} />
+          <div className="absolute top-1/3 left-1/4 w-48 h-48 rounded-full opacity-10 blur-xl" style={{ backgroundColor: secondaryColor }} />
+        </div>
+      )}
 
       <StoreHeader store={store} />
 
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 relative z-10 min-h-screen">
-        {/* Mobile Store Banner - Only visible on mobile */}
+        {/* Animated Mobile Store Banner */}
         {isMobile && (
-          <div className="mb-6 -mx-6 relative rounded-xl overflow-hidden rounded-none">
-            {/* Banner Background */}
+          <div className="mb-6 -mx-6 mx-auto relative rounded-xl overflow-hidden rounded-none " ref={mainRef} >
             <div 
               className="h-32 relative"
               style={{
@@ -200,7 +524,6 @@ export default function StoreWebsite({ store }) {
                 backgroundColor: store.branding?.banner ? 'transparent' : `${primaryColor}10`
               }}
             >
-              {/* Semi-transparent blur overlay */}
               <div 
                 className="absolute inset-0 backdrop-blur-sm"
                 style={{ 
@@ -209,8 +532,7 @@ export default function StoreWebsite({ store }) {
                 }}
               />
               
-              {/* Store Info Overlay */}
-              <div className="absolute inset-0 flex flex-col justify-center px-6">
+              <div className="absolute inset-0 flex flex-col justify-center px-6 banner-content">
                 <div className="flex items-center gap-3 mb-2">
                   {store.branding?.logo && (
                     <img 
@@ -230,7 +552,6 @@ export default function StoreWebsite({ store }) {
                   </p>
                 )}
                 
-                {/* Store Type Badge */}
                 <div className="mt-2">
                   <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm text-white border border-white/30">
                     {store.storeType === 'physical' ? '🏪 Physical Store' : '🌐 Online Store'}
@@ -238,7 +559,6 @@ export default function StoreWebsite({ store }) {
                 </div>
               </div>
               
-              {/* Decorative gradient overlay */}
               <div 
                 className="absolute inset-0 opacity-30"
                 style={{
@@ -250,9 +570,9 @@ export default function StoreWebsite({ store }) {
         )}
 
         {/* Filters Bar */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8 relative z-40" ref={filtersRef}>
           {/* Mobile Filter Dropdown - Only visible on mobile */}
-          {isMobile && ( <div className="w-full sm:hidden">
+          {isMobile && ( <div className="w-full sm:hidden relative z-50">
             <MobileFilterDropdown
               categoryOptions={categoryOptions}
               priceOptions={priceOptions}
@@ -312,7 +632,7 @@ export default function StoreWebsite({ store }) {
 
         {/* Products Section */}
         <div>
-          <div className="flex items-center justify-between mb-6 ">
+          <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl font-semibold text-gray-900">
               {isMobile ? 'Products' : ''}
             </h3>
@@ -322,16 +642,16 @@ export default function StoreWebsite({ store }) {
           </div>
 
           {loading ? (
-            <div className="text-center py-20">
+            <div className="text-center py-20" ref={loadingRef}>
               <div
-                className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200"
+                className="loading-spinner inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200"
                 style={{ borderTopColor: primaryColor }}
               ></div>
-              <p className="mt-4 text-sm text-gray-600">Loading products...</p>
+              <p className="loading-text mt-4 text-sm text-gray-600">Loading products...</p>
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="text-8xl mb-4">📦</div>
+            <div className="text-center py-20" ref={emptyStateRef}>
+              <div className="empty-emoji text-8xl mb-4">📦</div>
               <h4 className="text-xl font-semibold text-gray-900 mb-2">
                 No Products Found
               </h4>
@@ -340,11 +660,14 @@ export default function StoreWebsite({ store }) {
               </p>
             </div>
           ) : (
-            <div className={`grid ${
-              isMobile 
-                ? 'grid-cols-2 gap-3' 
-                : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 '
-            }`}>
+            <div 
+              className={`grid ${
+                isMobile 
+                  ? 'grid-cols-2 gap-3' 
+                  : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'
+              }`}
+              ref={productsGridRef}
+            >
               {filteredProducts.map((product) => (
                 isMobile ? (
                   <ProductCardMobile
@@ -369,7 +692,6 @@ export default function StoreWebsite({ store }) {
         </div>
       </main>
 
-      {/* Store Footer */}
       <StoreFooter />
 
       {/* Filter Modals - Outside main to avoid z-index stacking context issues */}

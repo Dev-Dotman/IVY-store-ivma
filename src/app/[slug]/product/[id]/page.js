@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Minus, ShoppingCart, Heart, MapPin, Tag, Package, Star } from "lucide-react";
+import { ArrowLeft, Plus, Minus, ShoppingCart, Heart, MapPin, Tag, Package, Star, Share2, Check } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import useStoreStore from "@/stores/storeStore";
@@ -17,6 +17,11 @@ export default function ProductDetailsPage({ params }) {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [liked, setLiked] = useState(false);
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  
+  // Add wishlist states
+  const [addingToWishlist, setAddingToWishlist] = useState(false);
+  const [checkingWishlist, setCheckingWishlist] = useState(false);
 
   // Get store from Zustand store
   const { currentStore, fetchStore } = useStoreStore();
@@ -49,6 +54,34 @@ export default function ProductDetailsPage({ params }) {
       fetchProduct();
     }
   }, [resolvedParams.id]);
+
+  // Check if item is in user's wishlist when component mounts
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (!isAuthenticated || !product?._id) return;
+      
+      setCheckingWishlist(true);
+      try {
+        const response = await fetch('/api/wishlist', {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        if (response.ok && data.success && data.wishlist?.items) {
+          const isInWishlist = data.wishlist.items.some(item => 
+            (item.product._id || item.product) === product._id
+          );
+          setLiked(isInWishlist);
+        }
+      } catch (error) {
+        console.error('Error checking wishlist status:', error);
+      } finally {
+        setCheckingWishlist(false);
+      }
+    };
+
+    checkWishlistStatus();
+  }, [isAuthenticated, product?._id]);
 
   // Store colors with fallbacks
   const primaryColor = currentStore?.branding?.primaryColor || '#0D9488';
@@ -139,6 +172,108 @@ export default function ProductDetailsPage({ params }) {
     }
   };
 
+  // Update handleShare function to include store slug
+  const handleShare = async () => {
+    const productUrl = `${window.location.origin}/${resolvedParams.slug}/product/${product._id}`;
+    
+    try {
+      // Try using the Web Share API first (mobile devices)
+      if (navigator.share) {
+        await navigator.share({
+          title: product.productName,
+          text: `Check out ${product.productName} at ${currentStore?.storeName}`,
+          url: productUrl,
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(productUrl);
+        setShareSuccess(true);
+        
+        // Reset success state after 2 seconds
+        setTimeout(() => {
+          setShareSuccess(false);
+        }, 2000);
+      }
+    } catch (error) {
+      // If clipboard API fails, create a temporary textarea
+      const textArea = document.createElement('textarea');
+      textArea.value = productUrl;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        document.execCommand('copy');
+        setShareSuccess(true);
+        setTimeout(() => {
+          setShareSuccess(false);
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy link:', err);
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
+  };
+
+  // Add proper wishlist toggle handler
+  const handleWishlistToggle = async () => {
+    if (!isAuthenticated) {
+      // Redirect to sign in with current product page as redirect
+      router.push(`/${resolvedParams.slug}?signin=true`);
+      return;
+    }
+
+    setAddingToWishlist(true);
+    
+    try {
+      if (liked) {
+        // Remove from wishlist
+        const response = await fetch(`/api/wishlist/${product._id}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          setLiked(false);
+        } else {
+          console.error('Failed to remove from wishlist');
+        }
+      } else {
+        // Add to wishlist
+        const response = await fetch('/api/wishlist', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            productId: product._id,
+            priority: 'medium',
+            notes: '',
+            notifications: {
+              priceDropAlert: true,
+              backInStockAlert: true
+            }
+          })
+        });
+        
+        if (response.ok) {
+          setLiked(true);
+        } else {
+          console.error('Failed to add to wishlist');
+        }
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+    } finally {
+      setAddingToWishlist(false);
+    }
+  };
+
   const totalPrice = product.sellingPrice * quantity;
 
   return (
@@ -207,18 +342,44 @@ export default function ProductDetailsPage({ params }) {
                   </div>
                 )}
 
-                {/* Wishlist Button - responsive sizing */}
-                <button
-                  onClick={() => setLiked(!liked)}
-                  className="absolute top-3 sm:top-6 right-3 sm:right-6 w-10 h-10 sm:w-14 sm:h-14 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:scale-110 hover:bg-white transition-all"
-                >
-                  <Heart 
-                    className={`w-5 h-5 sm:w-6 sm:h-6 ${liked ? 'fill-current' : ''}`}
-                    style={liked ? { color: primaryColor } : { color: '#6B7280' }}
-                    strokeWidth={liked ? 0 : 2}
-                    fill={liked ? primaryColor : 'none'}
-                  />
-                </button>
+                {/* Wishlist and Share Buttons - Updated with proper wishlist handling */}
+                <div className="absolute top-3 sm:top-6 right-3 sm:right-6 flex gap-2">
+                  {/* Share Button */}
+                  <button
+                    onClick={handleShare}
+                    className="w-10 h-10 sm:w-14 sm:h-14 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:scale-110 hover:bg-white transition-all"
+                    title="Share product"
+                  >
+                    {shareSuccess ? (
+                      <Check 
+                        className="w-5 h-5 sm:w-6 sm:h-6 text-green-600"
+                      />
+                    ) : (
+                      <Share2 
+                        className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600"
+                      />
+                    )}
+                  </button>
+
+                  {/* Wishlist Button - Updated with proper functionality */}
+                  <button
+                    onClick={handleWishlistToggle}
+                    disabled={addingToWishlist || checkingWishlist}
+                    className="w-10 h-10 sm:w-14 sm:h-14 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg hover:scale-110 hover:bg-white transition-all disabled:opacity-50"
+                    title={isAuthenticated ? (liked ? "Remove from wishlist" : "Add to wishlist") : "Sign in to add to wishlist"}
+                  >
+                    {addingToWishlist || checkingWishlist ? (
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Heart 
+                        className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-200 ${liked ? 'fill-current scale-110' : ''}`}
+                        style={liked ? { color: primaryColor } : { color: '#6B7280' }}
+                        strokeWidth={liked ? 0 : 2}
+                        fill={liked ? primaryColor : 'none'}
+                      />
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Product Stats Cards - Mobile: horizontal scroll, Desktop: grid */}
@@ -431,6 +592,30 @@ export default function ProductDetailsPage({ params }) {
           </div>
         </div>
       )}
+
+      {/* Success Toast for Share - Mobile optimized */}
+      {shareSuccess && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+          <Check className="w-4 h-4" />
+          <span className="text-sm font-medium">Link copied to clipboard!</span>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -10px);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }
