@@ -20,6 +20,56 @@ if (typeof window !== "undefined") {
 }
 
 export default function StoreWebsite({ store }) {
+  // Update favicon when component mounts - SIMPLIFIED APPROACH
+  useEffect(() => {
+    const updateFavicon = () => {
+      const faviconUrl = store?.branding?.logo;
+      if (!faviconUrl) return;
+
+      try {
+        // Just update existing favicon href, don't remove/add elements
+        let iconLink = document.querySelector('link[rel="icon"]');
+        if (iconLink) {
+          iconLink.href = faviconUrl + `?v=${Date.now()}`;
+        } else {
+          // Only create if doesn't exist
+          iconLink = document.createElement('link');
+          iconLink.rel = 'icon';
+          iconLink.href = faviconUrl + `?v=${Date.now()}`;
+          document.head.appendChild(iconLink);
+        }
+
+        // Update apple touch icon
+        let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
+        if (appleIcon) {
+          appleIcon.href = faviconUrl + `?v=${Date.now()}`;
+        } else {
+          appleIcon = document.createElement('link');
+          appleIcon.rel = 'apple-touch-icon';
+          appleIcon.href = faviconUrl + `?v=${Date.now()}`;
+          document.head.appendChild(appleIcon);
+        }
+      } catch (error) {
+        console.error('Favicon update error:', error);
+      }
+    };
+
+    updateFavicon();
+
+    // Cleanup: restore default favicon
+    return () => {
+      try {
+        const defaultFavicon = '/favicon.ico';
+        const iconLink = document.querySelector('link[rel="icon"]');
+        if (iconLink) {
+          iconLink.href = defaultFavicon;
+        }
+      } catch (error) {
+        console.error('Favicon cleanup error:', error);
+      }
+    };
+  }, [store?.branding?.logo]);
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
