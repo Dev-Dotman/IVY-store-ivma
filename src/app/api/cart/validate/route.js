@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Cart from "@/models/Cart";
-import { verifySession } from "@/lib/auth";
+import { verifyCustomerSession } from "@/lib/auth";
 
 export async function POST(request) {
   try {
     await connectToDatabase();
 
-    const customerId = await verifySession(request);
+    // Verify customer session
+    const customerId = await verifyCustomerSession(request);
+    if (!customerId) {
+      return NextResponse.json(
+        { success: false, message: "Authentication required" },
+        { status: 401 }
+      );
+    }
 
     if (!customerId) {
       return NextResponse.json(
