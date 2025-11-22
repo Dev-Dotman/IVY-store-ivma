@@ -566,7 +566,7 @@ export default function StoreCartPage({ params }) {
       {/* Order Confirmation Modal with Store Colors */}
       {showOrderModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-2xl max-w-md max-h-[95vh] w-full overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl max-w-md max-h-[90dvh] w-full overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div 
               className="text-center p-6 flex-shrink-0"
@@ -727,7 +727,6 @@ export default function StoreCartPage({ params }) {
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="w-5 h-5" />
                       Confirm Order
                     </>
                   )}

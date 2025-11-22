@@ -112,23 +112,8 @@ export default function CartPage() {
   };
 
   const handleRemoveItem = async (productId) => {
-    try {
-      // Show confirmation dialog
-      const confirmed = window.confirm("Are you sure you want to remove this item from your cart?");
-      if (!confirmed) return;
-
-      console.log('Removing item with ID:', productId);
-      
-      // Call the removeFromCart function
+    if (confirm("Are you sure you want to remove this item from your cart?")) {
       await removeFromCart(productId);
-      
-      // Show success message (optional)
-      // You could use a toast notification here instead of alert
-      console.log('Item removed successfully');
-      
-    } catch (error) {
-      console.error('Failed to remove item:', error);
-      alert('Failed to remove item. Please try again.');
     }
   };
 
@@ -424,10 +409,10 @@ export default function CartPage() {
                             </div>
                             <button
                               onClick={() => handleRemoveItem(item.product._id || item.product)}
-                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors group"
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                               title="Remove item"
                             >
-                              <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                              <Trash2 className="w-5 h-5" />
                             </button>
                           </div>
 
@@ -713,7 +698,6 @@ export default function CartPage() {
                     </>
                   ) : (
                     <>
-                      {/* <CheckCircle className="w-5 h-5" /> */}
                       Confirm Order
                     </>
                   )}
