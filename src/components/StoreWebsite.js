@@ -13,6 +13,9 @@ import MobileFilterDropdown from "./ui/MobileFilterDropdown";
 import { ChevronDown } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import useStoreStore from "@/stores/storeStore";
+import SignInModal from "./auth/SignInModal";
+import SignUpModal from "./auth/SignUpModal";
+import ForgotPasswordModal from "./auth/ForgotPasswordModal";
 
 // Register GSAP plugins
 if (typeof window !== "undefined") {
@@ -83,6 +86,11 @@ export default function StoreWebsite({ store }) {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+
+  // Auth modal states
+  const [showSignInModal, setShowSignInModal] = useState(false);
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   const { addToCart } = useCart();
 
@@ -557,7 +565,10 @@ export default function StoreWebsite({ store }) {
         </div>
       )}
 
-      <StoreHeader store={store} />
+      <StoreHeader 
+        store={store} 
+        onSignInClick={() => setShowSignInModal(true)}
+      />
 
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 relative z-10 min-h-screen">
         {/* Animated Mobile Store Banner */}
@@ -743,6 +754,38 @@ export default function StoreWebsite({ store }) {
       </main>
 
       <StoreFooter />
+
+      {/* Auth Modals */}
+      <SignInModal
+        isOpen={showSignInModal}
+        onClose={() => setShowSignInModal(false)}
+        onSwitchToSignUp={() => {
+          setShowSignInModal(false);
+          setShowSignUpModal(true);
+        }}
+        onForgotPassword={() => {
+          setShowSignInModal(false);
+          setShowForgotPasswordModal(true);
+        }}
+      />
+
+      <SignUpModal
+        isOpen={showSignUpModal}
+        onClose={() => setShowSignUpModal(false)}
+        onSwitchToSignIn={() => {
+          setShowSignUpModal(false);
+          setShowSignInModal(true);
+        }}
+      />
+
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        onBackToSignIn={() => {
+          setShowForgotPasswordModal(false);
+          setShowSignInModal(true);
+        }}
+      />
 
       {/* Filter Modals - Outside main to avoid z-index stacking context issues */}
       {/* Debug: Modal States */}

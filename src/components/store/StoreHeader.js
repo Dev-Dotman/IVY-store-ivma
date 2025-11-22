@@ -8,7 +8,7 @@ import SignInModal from '../auth/SignInModal';
 import SignUpModal from '../auth/SignUpModal';
 import useStoreStore from '@/stores/storeStore';
 
-export default function StoreHeader() {
+export default function StoreHeader({ store, onSignInClick }) {
   const router = useRouter();
   const pathname = usePathname();
   const { customer, isAuthenticated, isLoading: authLoading, logout, setRedirectAfterLogin } = useAuth();
@@ -77,7 +77,7 @@ export default function StoreHeader() {
   
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
         {/* Top announcement bar */}
         {/* <div 
           className="text-white text-center py-2 px-4 text-sm font-medium" 
@@ -252,7 +252,7 @@ export default function StoreHeader() {
                 </div>
               ) : (
                 <button 
-                  onClick={() => setShowSignIn(true)}
+                  onClick={onSignInClick || (() => setShowSignIn(true))}
                   className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
                 >
                   <User className="w-5 h-5" />

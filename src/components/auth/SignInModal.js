@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-export default function SignInModal({ isOpen, onClose, onSwitchToSignUp }) {
+export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onForgotPassword }) {
   const { login, setRedirectAfterLogin } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -194,9 +194,16 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp }) {
                   Remember me
                 </label>
               </div>
-              <a href="#" className="text-sm text-emerald-600 hover:text-emerald-500">
+              <button 
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onForgotPassword();
+                }}
+                className="text-sm text-emerald-600 hover:text-emerald-500"
+              >
                 Forgot Password?
-              </a>
+              </button>
             </div>
 
             {/* Submit Button */}

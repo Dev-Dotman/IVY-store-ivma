@@ -6,6 +6,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import SignInModal from "@/components/auth/SignInModal";
 import SignUpModal from "@/components/auth/SignUpModal";
+import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
 
 export default function ProductDetailsClient({ store, product, slug }) {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function ProductDetailsClient({ store, product, slug }) {
   const [checkingWishlist, setCheckingWishlist] = useState(false);
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showSignUpModal, setShowSignUpModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   const primaryColor = store?.branding?.primaryColor || '#0D9488';
   const secondaryColor = store?.branding?.secondaryColor || '#F3F4F6';
@@ -515,6 +517,10 @@ export default function ProductDetailsClient({ store, product, slug }) {
           setShowSignInModal(false);
           setShowSignUpModal(true);
         }}
+        onForgotPassword={() => {
+          setShowSignInModal(false);
+          setShowForgotPasswordModal(true);
+        }}
       />
 
       {/* Sign Up Modal */}
@@ -523,6 +529,16 @@ export default function ProductDetailsClient({ store, product, slug }) {
         onClose={() => setShowSignUpModal(false)}
         onSwitchToSignIn={() => {
           setShowSignUpModal(false);
+          setShowSignInModal(true);
+        }}
+      />
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        onBackToSignIn={() => {
+          setShowForgotPasswordModal(false);
           setShowSignInModal(true);
         }}
       />

@@ -133,3 +133,114 @@ export async function sendWelcomeEmail(email, firstName) {
     return { success: false, error: error.message };
   }
 }
+
+// Send password reset email
+export async function sendPasswordResetEmail(email, name, resetUrl, expiryMinutes) {
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || 'noreply@ivmastore.com',
+    to: email,
+    subject: 'Reset Your Password - IVMA Store',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Reset Your Password</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  
+                  <!-- Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%); padding: 40px 30px; text-align: center;">
+                      <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">🔒 Password Reset</h1>
+                    </td>
+                  </tr>
+                  
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 40px 30px;">
+                      <p style="margin: 0 0 20px; font-size: 16px; color: #333333; line-height: 1.6;">
+                        Hi ${name},
+                      </p>
+                      
+                      <p style="margin: 0 0 20px; font-size: 16px; color: #333333; line-height: 1.6;">
+                        We received a request to reset your password for your IVMA Store account. Click the button below to create a new password:
+                      </p>
+                      
+                      <!-- Reset Button -->
+                      <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                        <tr>
+                          <td align="center">
+                            <a href="${resetUrl}" 
+                               style="display: inline-block; padding: 16px 40px; background-color: #0D9488; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold;">
+                              Reset Password
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <p style="margin: 20px 0; font-size: 14px; color: #666666; line-height: 1.6;">
+                        Or copy and paste this link into your browser:
+                      </p>
+                      
+                      <p style="margin: 0 0 20px; padding: 12px; background-color: #f5f5f5; border-radius: 4px; font-size: 12px; color: #666666; word-break: break-all;">
+                        ${resetUrl}
+                      </p>
+                      
+                      <div style="margin: 30px 0; padding: 16px; background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 4px;">
+                        <p style="margin: 0; font-size: 14px; color: #92400E; line-height: 1.6;">
+                          <strong>⏱️ Important:</strong> This link will expire in ${expiryMinutes} minutes for security reasons.
+                        </p>
+                      </div>
+                      
+                      <p style="margin: 20px 0 0; font-size: 14px; color: #666666; line-height: 1.6;">
+                        If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #f5f5f5; padding: 30px; text-align: center; border-top: 1px solid #e5e5e5;">
+                      <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">
+                        Need help? Contact us at 
+                        <a href="mailto:support@ivmastore.com" style="color: #0D9488; text-decoration: none;">support@ivmastore.com</a>
+                      </p>
+                      <p style="margin: 0; font-size: 12px; color: #999999;">
+                        © ${new Date().getFullYear()} IVMA Store. All rights reserved.
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+      </html>
+    `,
+    text: `
+Hi ${name},
+
+We received a request to reset your password for your IVMA Store account.
+
+Click the link below to reset your password:
+${resetUrl}
+
+This link will expire in ${expiryMinutes} minutes for security reasons.
+
+If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+
+Need help? Contact us at support@ivmastore.com
+
+© ${new Date().getFullYear()} IVMA Store. All rights reserved.
+    `.trim()
+  };
+
+  return await transporter.sendMail(mailOptions);
+}
