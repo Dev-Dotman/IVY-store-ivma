@@ -550,7 +550,7 @@ export default function CartPage() {
       {/* Order Confirmation Modal */}
       {showOrderModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-2xl max-w-md max-h-[95vh] w-full p-6" style={{maxHeight: '95vh', overflowY: 'auto'}}>
+          <div className="bg-white rounded-2xl max-w-md max-h-[90dvh] w-full p-6" style={{maxHeight: '95vh', overflowY: 'auto'}}>
             {/* Modal Header */}
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -713,7 +713,7 @@ export default function CartPage() {
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="w-5 h-5" />
+                      {/* <CheckCircle className="w-5 h-5" /> */}
                       Confirm Order
                     </>
                   )}
