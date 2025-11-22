@@ -7,6 +7,7 @@ import InventoryBatch from "@/models/InventoryBatch";
 import Store from "@/models/Store";
 import Customer from "@/models/Customer";
 import { verifyCustomerSession } from "@/lib/auth";
+import { sendNewOrderNotification } from "@/lib/email";
 
 export async function POST(request) {
   try {
@@ -212,21 +213,58 @@ export async function POST(request) {
       }
 
       if (store.ivmaWebsite && store.ivmaWebsite.isEnabled) {
-          await Store.findByIdAndUpdate(storeId, {
-            $inc: {
-              'ivmaWebsite.metrics.totalOrders': 1
-            },
-            $set: {
-              'ivmaWebsite.metrics.lastVisit': new Date()
-            }
-          });
-        }
+        await Store.findByIdAndUpdate(storeId, {
+          $inc: {
+            'ivmaWebsite.metrics.totalOrders': 1
+          },
+          $set: {
+            'ivmaWebsite.metrics.lastVisit': new Date()
+          }
+        });
+      }
     }
 
     // Clear the cart
     await cart.clearCart();
 
-    // TODO: Send email/SMS notifications to customer and store owners
+    // Send email notifications to store owners
+    const notificationPromises = storeIds.map(async (storeId) => {
+      try {
+        const store = await Store.findById(storeId);
+        if (!store || !store.storeEmail) {
+          console.log(`No email found for store ${storeId}`);
+          return;
+        }
+
+        const storeItems = orderItems.filter(item => item.store.toString() === storeId);
+        const storeTotal = storeItems.reduce((sum, item) => sum + item.subtotal, 0);
+
+        const orderData = {
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          customerSnapshot: order.customerSnapshot,
+          shippingAddress: order.shippingAddress,
+          customerNotes: order.customerNotes,
+          storeItems: storeItems,
+          storeItemCount: storeItems.length,
+          storeTotal: storeTotal
+        };
+
+        await sendNewOrderNotification(
+          store.storeEmail,
+          store.storeName,
+          orderData
+        );
+
+        console.log(`Order notification sent to ${store.storeName} (${store.storeEmail})`);
+      } catch (emailError) {
+        console.error(`Failed to send email to store ${storeId}:`, emailError);
+        // Don't fail the entire order if email fails
+      }
+    });
+
+    // Wait for all email notifications (but don't fail if they error)
+    await Promise.allSettled(notificationPromises);
 
     return NextResponse.json({
       success: true,
@@ -237,7 +275,7 @@ export async function POST(request) {
         totalAmount: order.totalAmount,
         itemCount: order.itemCount,
         status: order.status,
-        stores: order.stores // Include stores with social media data
+        stores: order.stores
       }
     });
 

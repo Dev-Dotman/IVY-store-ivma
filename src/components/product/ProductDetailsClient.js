@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import SignInModal from "@/components/auth/SignInModal";
 import SignUpModal from "@/components/auth/SignUpModal";
 import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
+import Toast from "@/components/ui/Toast";
 
 export default function ProductDetailsClient({ store, product, slug }) {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function ProductDetailsClient({ store, product, slug }) {
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const primaryColor = store?.branding?.primaryColor || '#0D9488';
   const secondaryColor = store?.branding?.secondaryColor || '#F3F4F6';
@@ -127,8 +129,7 @@ export default function ProductDetailsClient({ store, product, slug }) {
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
-      // Show the prompt modal first
-      setShowSignInPrompt(true);
+      setShowSignInModal(true);
       return;
     }
 
@@ -136,14 +137,25 @@ export default function ProductDetailsClient({ store, product, slug }) {
     try {
       const result = await addToCart(product._id, quantity);
       if (result.success) {
-        alert("Item added to cart successfully!");
+        // Show success toast instead of alert
+        setToast({
+          message: `${quantity} ${quantity === 1 ? 'item' : 'items'} added to cart successfully!`,
+          type: 'success'
+        });
         setQuantity(1);
       } else {
-        alert(result.error || "Failed to add item to cart");
+        // Show error toast
+        setToast({
+          message: result.error || "Failed to add item to cart",
+          type: 'error'
+        });
       }
     } catch (error) {
       console.error("Error adding to cart:", error);
-      alert("Please sign in to add items to cart");
+      setToast({
+        message: "Please sign in to add items to cart",
+        type: 'error'
+      });
     } finally {
       setIsAddingToCart(false);
     }
@@ -153,19 +165,53 @@ export default function ProductDetailsClient({ store, product, slug }) {
     const productUrl = `${window.location.origin}/${slug}/product/${product._id}`;
     
     try {
+      // Check if Web Share API is available (works on most mobile browsers)
       if (navigator.share) {
         await navigator.share({
           title: product.productName,
           text: `Check out ${product.productName} at ${store?.storeName}`,
           url: productUrl,
         });
-      } else {
+        return;
+      }
+      
+      // Fallback: Try clipboard API
+      if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(productUrl);
         setShareSuccess(true);
         setTimeout(() => setShareSuccess(false), 2000);
+        return;
+      }
+      
+      // Final fallback: Create a temporary input and copy manually
+      const tempInput = document.createElement('input');
+      tempInput.value = productUrl;
+      tempInput.style.position = 'fixed';
+      tempInput.style.opacity = '0';
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      tempInput.setSelectionRange(0, 99999); // For mobile devices
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      
+      if (successful) {
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 2000);
+      } else {
+        // If all methods fail, show the URL in a prompt
+        setToast({
+          message: `Copy this link: ${productUrl}`,
+          type: 'info'
+        });
       }
     } catch (error) {
       console.error('Share failed:', error);
+      // Show error toast
+      setToast({
+        message: 'Could not share. Please copy the URL manually.',
+        type: 'error'
+      });
     }
   };
 
@@ -549,6 +595,15 @@ export default function ProductDetailsClient({ store, product, slug }) {
           <Check className="w-4 h-4" />
           <span className="text-sm font-medium">Link copied to clipboard!</span>
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
 
       <style jsx>{`

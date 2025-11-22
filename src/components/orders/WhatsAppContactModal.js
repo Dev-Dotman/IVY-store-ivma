@@ -196,7 +196,7 @@ export default function WhatsAppContactModal({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden" style={{ boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)', maxWidth: '28rem' }}>
+      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90dvh] overflow-hidden" style={{ boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)', maxWidth: '28rem' }}>
         {/* Modal Header */}
         <div 
           className="text-center p-6 border-b border-gray-100 relative"
