@@ -208,10 +208,10 @@ export default function ProductDetailsClient({ store, product, slug }) {
     } catch (error) {
       console.error('Share failed:', error);
       // Show error toast
-      setToast({
-        message: 'Could not share. Please copy the URL manually.',
-        type: 'error'
-      });
+    //   setToast({
+    //     message: 'Could not share. Please copy the URL manually.',
+    //     type: 'error'
+    //   });
     }
   };
 
