@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import SignInModal from '../auth/SignInModal';
 import SignUpModal from '../auth/SignUpModal';
+import ForgotPasswordModal from '../auth/ForgotPasswordModal';
 import useStoreStore from '@/stores/storeStore';
 
 export default function StoreHeader({ store, onSignInClick }) {
@@ -20,6 +21,7 @@ export default function StoreHeader({ store, onSignInClick }) {
   
   const [showSignIn, setShowSignIn] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
@@ -459,6 +461,10 @@ export default function StoreHeader({ store, onSignInClick }) {
         isOpen={showSignIn}
         onClose={() => setShowSignIn(false)}
         onSwitchToSignUp={handleSwitchToSignUp}
+        onForgotPassword={() => {
+          setShowSignIn(false);
+          setShowForgotPassword(true);
+        }}
         onSuccess={() => {
           setShowSignIn(false);
           // Navigate to store-specific redirect if set
@@ -483,6 +489,15 @@ export default function StoreHeader({ store, onSignInClick }) {
           }
         }}
         onSwitchToSignIn={handleSwitchToSignIn}
+      />
+
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+        onBackToSignIn={() => {
+          setShowForgotPassword(false);
+          setShowSignIn(true);
+        }}
       />
 
       {/* Close account menu when clicking outside */}
