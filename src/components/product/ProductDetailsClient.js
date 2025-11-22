@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Minus, ShoppingCart, Heart, MapPin, Tag, Package, Share2, Check } from "lucide-react";
+import { ArrowLeft, Plus, Minus, ShoppingCart, Heart, MapPin, Tag, Package, Share2, Check, X } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import SignInModal from "@/components/auth/SignInModal";
+import SignUpModal from "@/components/auth/SignUpModal";
 
 export default function ProductDetailsClient({ store, product, slug }) {
   const router = useRouter();
@@ -16,6 +18,10 @@ export default function ProductDetailsClient({ store, product, slug }) {
   const [shareSuccess, setShareSuccess] = useState(false);
   const [addingToWishlist, setAddingToWishlist] = useState(false);
   const [checkingWishlist, setCheckingWishlist] = useState(false);
+  
+  // Auth modal states
+  const [showSignInModal, setShowSignInModal] = useState(false);
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
 
   const primaryColor = store?.branding?.primaryColor || '#0D9488';
   const secondaryColor = store?.branding?.secondaryColor || '#F3F4F6';
@@ -121,7 +127,8 @@ export default function ProductDetailsClient({ store, product, slug }) {
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
-      setShowSignInPrompt(true);
+      // Instead of showing the prompt, show the sign-in modal directly
+      setShowSignInModal(true);
       return;
     }
 
@@ -464,35 +471,27 @@ export default function ProductDetailsClient({ store, product, slug }) {
         )}
       </div>
 
-      {showSignInPrompt && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-xl sm:rounded-2xl max-w-md w-full p-4 sm:p-6 mx-4">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">Sign In Required</h3>
-            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
-              Please sign in to add items to your cart and complete your purchase.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => {
-                  setShowSignInPrompt(false);
-                  router.push(`/${slug}?signin=true`);
-                }}
-                className="w-full py-3 rounded-xl text-white font-semibold transition-all"
-                style={{ backgroundColor: primaryColor }}
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => setShowSignInPrompt(false)}
-                className="w-full py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Sign In Modal */}
+      <SignInModal
+        isOpen={showSignInModal}
+        onClose={() => setShowSignInModal(false)}
+        onSwitchToSignUp={() => {
+          setShowSignInModal(false);
+          setShowSignUpModal(true);
+        }}
+      />
 
+      {/* Sign Up Modal */}
+      <SignUpModal
+        isOpen={showSignUpModal}
+        onClose={() => setShowSignUpModal(false)}
+        onSwitchToSignIn={() => {
+          setShowSignUpModal(false);
+          setShowSignInModal(true);
+        }}
+      />
+
+      {/* Success Toast for Share - Mobile optimized */}
       {shareSuccess && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
           <Check className="w-4 h-4" />
