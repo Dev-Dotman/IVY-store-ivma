@@ -527,7 +527,7 @@ export default function StoreCartPage({ params }) {
                 </div>
 
                 {/* Promo Code */}
-                <div className="mb-6">
+                {/* <div className="mb-6">
                   <div className="flex gap-2">
                     <div className="flex-1 relative">
                       <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -548,7 +548,7 @@ export default function StoreCartPage({ params }) {
                       {isApplyingCoupon ? "..." : "Apply"}
                     </button>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Place Order Button */}
                 <button
