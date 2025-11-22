@@ -18,8 +18,6 @@ export default function ProductDetailsClient({ store, product, slug }) {
   const [shareSuccess, setShareSuccess] = useState(false);
   const [addingToWishlist, setAddingToWishlist] = useState(false);
   const [checkingWishlist, setCheckingWishlist] = useState(false);
-  
-  // Auth modal states
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showSignUpModal, setShowSignUpModal] = useState(false);
 
@@ -127,8 +125,8 @@ export default function ProductDetailsClient({ store, product, slug }) {
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
-      // Instead of showing the prompt, show the sign-in modal directly
-      setShowSignInModal(true);
+      // Show the prompt modal first
+      setShowSignInPrompt(true);
       return;
     }
 
@@ -470,6 +468,44 @@ export default function ProductDetailsClient({ store, product, slug }) {
           </div>
         )}
       </div>
+
+      {/* Sign In Prompt Modal - Keep this */}
+      {showSignInPrompt && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="bg-white rounded-xl sm:rounded-2xl max-w-md w-full p-4 sm:p-6 mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Sign In Required</h3>
+              <button
+                onClick={() => setShowSignInPrompt(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
+              Please sign in to add items to your cart and complete your purchase.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  setShowSignInPrompt(false);
+                  setShowSignInModal(true);
+                }}
+                className="w-full py-3 rounded-xl text-white font-semibold transition-all"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => setShowSignInPrompt(false)}
+                className="w-full py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sign In Modal */}
       <SignInModal
