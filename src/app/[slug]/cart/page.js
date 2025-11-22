@@ -289,22 +289,24 @@ export default function StoreCartPage({ params }) {
           // Single store - auto-redirect to WhatsApp
           const store = stores[0];
           if (store.storeSnapshot?.storePhone) {
-            setRedirectingToWhatsApp(true);
+            // setRedirectingToWhatsApp(true);
             
-            // Show brief loading then redirect
-            setTimeout(() => {
-              openWhatsApp(
-                store.storeSnapshot.storePhone, 
-                store.storeSnapshot.storeName || store.storeName,
-                store.itemCount
-              );
-              setRedirectingToWhatsApp(false);
+            // // Show brief loading then redirect
+            // setTimeout(() => {
+            //   openWhatsApp(
+            //     store.storeSnapshot.storePhone, 
+            //     store.storeSnapshot.storeName || store.storeName,
+            //     store.itemCount
+            //   );
+            //   setRedirectingToWhatsApp(false);
               
-              // Navigate to order details after WhatsApp redirect
-              setTimeout(() => {
+            //   // Navigate to order details after WhatsApp redirect
+              
+            // }, 1500);
+
+            setTimeout(() => {
                 router.push(`/${resolvedParams.slug}/orders/${data.order._id}`);
               }, 2000);
-            }, 1500);
           } else {
             // No phone number, go directly to order details
             router.push(`/${resolvedParams.slug}/orders/${data.order._id}`);
