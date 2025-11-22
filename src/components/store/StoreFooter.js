@@ -131,7 +131,7 @@ export default function StoreFooter() {
   ].filter(link => link.handle && link.handle.trim() !== '');
 
   return (
-    <footer className="bg-white border-t border-gray-100 mt-auto">
+    <footer className="bg-gray-100 border-t border-gray-100 mt-auto" >
       {/* Main Footer Content */}
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12">
@@ -144,7 +144,7 @@ export default function StoreFooter() {
                 <img 
                   src={currentStore.branding.logo} 
                   alt={currentStore.storeName} 
-                  className="h-12 w-auto object-contain" 
+                  className="h-12 w-auto object-contain rounded-full" 
                 />
               ) : (
                 <div 
