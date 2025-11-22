@@ -133,24 +133,25 @@ export default function StoreFooter() {
   return (
     <footer className="bg-white border-t border-gray-100 mt-auto">
       {/* Main Footer Content */}
-      <div className="max-w-7xl mx-auto pt-12 px-6 lg:px-8 py-12 bg-white" style={{ backgroundColor: 'white', backdropFilter: isMobile ? 'saturate(180%) blur(20px)' : 'none' }}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12">
           
-          {/* Store Information */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center gap-3 mb-6 sm:mt-6">
+          {/* Store Information - Takes up more space */}
+          <div className="lg:col-span-5">
+            {/* Store Logo & Name */}
+            <div className="flex items-center gap-3 mb-4">
               {currentStore.branding?.logo ? (
                 <img 
                   src={currentStore.branding.logo} 
                   alt={currentStore.storeName} 
-                  className="h-10 w-auto object-contain" 
+                  className="h-12 w-auto object-contain" 
                 />
               ) : (
                 <div 
-                  className="h-10 w-10 rounded-lg flex items-center justify-center"
+                  className="h-12 w-12 rounded-xl flex items-center justify-center shadow-sm"
                   style={{ backgroundColor: primaryColor }}
                 >
-                  <span className="text-white font-bold text-lg">
+                  <span className="text-white font-bold text-xl">
                     {currentStore.storeName?.charAt(0)?.toUpperCase() || 'S'}
                   </span>
                 </div>
@@ -159,41 +160,149 @@ export default function StoreFooter() {
                 <h3 className="text-xl font-bold text-gray-900">
                   {currentStore.storeName}
                 </h3>
-                <p className="text-sm text-gray-500">
-                  {currentStore.storeType === 'physical' ? 'Physical Store' : 'Online Store'}
-                </p>
+                {/* <span 
+                  className="inline-block text-xs px-2 py-0.5 rounded-full mt-1"
+                  style={{ 
+                    backgroundColor: `${primaryColor}15`,
+                    color: primaryColor 
+                  }}
+                >
+                  {currentStore.storeType === 'physical' ? '🏪 Physical Store' : '🌐 Online Store'}
+                </span> */}
               </div>
             </div>
 
             {/* Store Description */}
             {currentStore.storeDescription && (
-              <p className="text-gray-600 mb-6 leading-relaxed">
+              <p className="text-gray-600 mb-6 leading-relaxed text-sm">
                 {currentStore.storeDescription}
               </p>
             )}
 
-            {/* Contact Information */}
-            <div className="space-y-3">
-              {/* Physical Address (only for physical stores) */}
+            {/* Social Media Links - Moved here for better prominence */}
+            {socialMediaLinks.length > 0 && (
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-3">
+                  Connect With Us
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {socialMediaLinks.map((social, index) => {
+                    const IconComponent = social.icon;
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => openSocialLink(social.platform, social.handle)}
+                        className="w-10 h-10 rounded-lg flex items-center justify-center border transition-all duration-200 group hover:shadow-md"
+                        style={{ 
+                          borderColor: `${primaryColor}30`,
+                          backgroundColor: 'white'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = `${primaryColor}10`;
+                          e.currentTarget.style.borderColor = primaryColor;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                          e.currentTarget.style.borderColor = `${primaryColor}30`;
+                        }}
+                        title={social.platform}
+                      >
+                        <IconComponent 
+                          className="w-5 h-5 transition-transform group-hover:scale-110"
+                          style={{ color: primaryColor }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Links */}
+          <div className="lg:col-span-3">
+            <h4 className="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-4">
+              Quick Links
+            </h4>
+            <ul className="space-y-2.5">
+              {quickLinks.map((link, index) => {
+                const IconComponent = link.icon;
+                return (
+                  <li key={index}>
+                    <button
+                      onClick={() => router.push(link.path)}
+                      className="flex items-center gap-2.5 text-sm text-gray-600 hover:text-gray-900 transition-colors group w-full text-left"
+                    >
+                      <div 
+                        className="w-8 h-8 rounded-lg flex items-center justify-center transition-all group-hover:shadow-sm"
+                        style={{ 
+                          backgroundColor: `${primaryColor}10`,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = `${primaryColor}20`;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = `${primaryColor}10`;
+                        }}
+                      >
+                        <IconComponent 
+                          className="w-4 h-4 transition-transform group-hover:scale-110" 
+                          style={{ color: primaryColor }}
+                        />
+                      </div>
+                      <span className="group-hover:translate-x-0.5 transition-transform">
+                        {link.label}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {/* Contact Information */}
+          <div className="lg:col-span-4">
+            <h4 className="text-xs uppercase tracking-wide text-gray-500 font-semibold mb-4">
+              Contact Information
+            </h4>
+            <div className="space-y-4">
+              {/* Physical Address */}
               {currentStore.storeType === 'physical' && currentStore.fullAddress && (
                 <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Store Address</p>
-                    <p className="text-sm text-gray-600">{currentStore.fullAddress}</p>
+                  <div 
+                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                    style={{ backgroundColor: `${primaryColor}10` }}
+                  >
+                    <MapPin className="w-4 h-4" style={{ color: primaryColor }} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-gray-900 mb-1">Store Location</p>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {currentStore.fullAddress}
+                    </p>
                   </div>
                 </div>
               )}
 
               {/* Phone */}
               {currentStore.storePhone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Phone</p>
+                <div className="flex items-start gap-3">
+                  <div 
+                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${primaryColor}10` }}
+                  >
+                    <Phone className="w-4 h-4" style={{ color: primaryColor }} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-gray-900 mb-1">Phone</p>
                     <a 
                       href={`tel:${currentStore.storePhone}`}
-                      className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                      className="text-sm text-gray-600 hover:underline"
+                      style={{ 
+                        '--hover-color': primaryColor 
+                      }}
+                      onMouseEnter={(e) => e.target.style.color = primaryColor}
+                      onMouseLeave={(e) => e.target.style.color = ''}
                     >
                       {currentStore.storePhone}
                     </a>
@@ -203,166 +312,129 @@ export default function StoreFooter() {
 
               {/* Email */}
               {currentStore.storeEmail && (
-                <div className="flex items-center gap-3">
-                  <Mail className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Email</p>
+                <div className="flex items-start gap-3">
+                  <div 
+                    className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: `${primaryColor}10` }}
+                  >
+                    <Mail className="w-4 h-4" style={{ color: primaryColor }} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-gray-900 mb-1">Email</p>
                     <a 
                       href={`mailto:${currentStore.storeEmail}`}
-                      className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                      className="text-sm text-gray-600 hover:underline break-all"
+                      onMouseEnter={(e) => e.target.style.color = primaryColor}
+                      onMouseLeave={(e) => e.target.style.color = ''}
                     >
                       {currentStore.storeEmail}
                     </a>
                   </div>
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* Quick Links */}
-          <div>
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h4>
-            <ul className="space-y-3">
-              {quickLinks.map((link, index) => {
-                const IconComponent = link.icon;
-                return (
-                  <li key={index}>
-                    <button
-                      onClick={() => router.push(link.path)}
-                      className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors group"
-                    >
-                      <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      {link.label}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+              {/* Store Hours */}
+              <div className="flex items-start gap-3">
+                <div 
+                  className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: `${primaryColor}10` }}
+                >
+                  <Clock className="w-4 h-4" style={{ color: primaryColor }} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-gray-900 mb-1">Store Hours</p>
+                  <p className="text-sm text-gray-600">
+                    {currentStore.storeType === 'physical' 
+                      ? 'Mon - Sat: 9:00 AM - 6:00 PM' 
+                      : 'Available 24/7 Online'}
+                  </p>
+                </div>
+              </div>
 
-          {/* Social Media & Additional Info */}
-          <div>
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Connect With Us</h4>
-            
-            {/* Social Media Links */}
-            {socialMediaLinks.length > 0 && (
-              <div className="mb-6">
-                <p className="text-sm text-gray-600 mb-3">Follow us on social media</p>
-                <div className="flex flex-wrap gap-3">
-                  {socialMediaLinks.map((social, index) => {
-                    const IconComponent = social.icon;
-                    return (
-                      <button
+              {/* Delivery Areas Badge */}
+              {currentStore.storeType === 'online' && currentStore.onlineStoreInfo?.deliveryAreas?.length > 0 && (
+                <div 
+                  className="p-3 rounded-lg border"
+                  style={{ 
+                    backgroundColor: `${primaryColor}05`,
+                    borderColor: `${primaryColor}20`
+                  }}
+                >
+                  <p className="text-xs font-semibold text-gray-900 mb-2">We Deliver To:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {currentStore.onlineStoreInfo.deliveryAreas.slice(0, 4).map((area, index) => (
+                      <span 
                         key={index}
-                        onClick={() => openSocialLink(social.platform, social.handle)}
-                        className="w-10 h-10 rounded-lg flex items-center justify-center border border-gray-200 hover:border-gray-300 transition-colors group"
+                        className="text-xs px-2.5 py-1 rounded-full font-medium"
                         style={{ 
-                          '--hover-bg': `${primaryColor}10`,
-                          '--hover-border': primaryColor ,
-                          color: primaryColor,
-                          borderColor: secondaryColor
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = `${primaryColor}10`;
-                          e.target.style.borderColor = primaryColor;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = '';
-                          e.target.style.borderColor = '';
+                          backgroundColor: `${primaryColor}15`,
+                          color: primaryColor
                         }}
                       >
-                        <IconComponent 
-                          className="w-5 h-5 text-gray-600 group-hover:scale-110 transition-transform"
-                          style={{ color: 'inherit' }}
-                        />
-                      </button>
-                    );
-                  })}
+                        {area}
+                      </span>
+                    ))}
+                    {currentStore.onlineStoreInfo.deliveryAreas.length > 4 && (
+                      <span 
+                        className="text-xs px-2.5 py-1 rounded-full font-medium"
+                        style={{ 
+                          backgroundColor: `${primaryColor}15`,
+                          color: primaryColor
+                        }}
+                      >
+                        +{currentStore.onlineStoreInfo.deliveryAreas.length - 4}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* Store Hours */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-4 h-4 text-gray-500" />
-                <p className="text-sm font-medium text-gray-900">Store Hours</p>
-              </div>
-              <p className="text-sm text-gray-600">
-                {currentStore.storeType === 'physical' 
-                  ? 'Mon - Sat: 9:00 AM - 6:00 PM' 
-                  : 'Available 24/7 Online'}
-              </p>
+              )}
             </div>
-
-            {/* Delivery Areas (for online stores) */}
-            {currentStore.storeType === 'online' && currentStore.onlineStoreInfo?.deliveryAreas?.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-gray-900 mb-2">Delivery Areas</p>
-                <div className="flex flex-wrap gap-1">
-                  {currentStore.onlineStoreInfo.deliveryAreas.slice(0, 3).map((area, index) => (
-                    <span 
-                      key={index}
-                      className="text-xs px-2 py-1 rounded-full text-gray-600"
-                      style={{ backgroundColor: `${primaryColor}10` }}
-                    >
-                      {area}
-                    </span>
-                  ))}
-                  {currentStore.onlineStoreInfo.deliveryAreas.length > 3 && (
-                    <span 
-                      className="text-xs px-2 py-1 rounded-full text-gray-600"
-                      style={{ backgroundColor: `${primaryColor}10` }}
-                    >
-                      +{currentStore.onlineStoreInfo.deliveryAreas.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
       {/* Bottom Bar */}
       <div 
-        className="border-t border-gray-100"
-        style={{ backgroundColor: `${primaryColor}05` }}
+        className="border-t"
+        style={{ 
+          backgroundColor: `${primaryColor}05`,
+          borderColor: `${primaryColor}15`
+        }}
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             
             {/* Copyright & IVMA Branding */}
             <div className="text-center sm:text-left">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 font-medium">
                 © {new Date().getFullYear()} {currentStore.storeName}. All rights reserved.
               </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Powered by{' '}
+              <p className="text-xs text-gray-500 mt-1.5 flex items-center justify-center sm:justify-start gap-1">
+                <span>Powered by</span>
                 <a 
                   href="https://ivma.ng" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="font-medium hover:underline"
+                  className="font-semibold hover:underline inline-flex items-center gap-1 transition-colors"
                   style={{ color: primaryColor }}
                 >
                   IVMA
+                  <Globe className="w-3 h-3" />
                 </a>
-                {' '}• Building digital stores for Nigerian businesses
               </p>
             </div>
 
             {/* Scroll to Top Button */}
             <button
               onClick={scrollToTop}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:opacity-80"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all hover:shadow-md hover:scale-105 active:scale-95"
               style={{ 
                 backgroundColor: primaryColor,
                 color: 'white'
               }}
             >
               <ArrowUp className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Top</span>
+              <span>Back to Top</span>
             </button>
           </div>
         </div>
