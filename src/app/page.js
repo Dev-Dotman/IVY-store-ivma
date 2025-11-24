@@ -55,7 +55,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-gray-200 mt-12 pt-8 text-center">
-            <p className="text-gray-500">&copy; 2024 IVMA Store. All rights reserved. Made with ❤️ for small businesses.</p>
+            <p className="text-gray-500">&copy; 2025 IVMA Store. All rights reserved. Made with ❤️ for small businesses.</p>
           </div>
         </div>
       </footer>

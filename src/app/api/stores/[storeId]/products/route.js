@@ -25,7 +25,7 @@ export async function GET(request, { params }) {
       userId: store.userId,
       status: 'Active',
       webVisibility: true,
-      quantityInStock: { $gt: 0 } // Only show items in stock
+      // quantityInStock: { $gt: 0 } // Only show items in stock
     })
     .select('productName description category sku brand unitOfMeasure quantityInStock reorderLevel sellingPrice costPrice image')
     .sort({ productName: 1 })
