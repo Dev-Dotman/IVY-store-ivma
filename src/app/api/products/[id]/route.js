@@ -28,13 +28,26 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Get ALL batches for this product (including potentially depleted ones)
-    const allBatches = await InventoryBatch.find({
+    // Get ALL batches for this product, sorted by FIFO (dateReceived ascending)
+    const batches = await InventoryBatch.find({
       productId: id,
-      status: 'active' // Only get active status batches
-    })
-    .sort({ dateReceived: 1 }) // FIFO ordering
-    .lean();
+      status: 'active'
+    }).sort({ dateReceived: 1 }).lean(); // FIFO order - oldest first
+
+    // Calculate actual remaining quantities BEFORE filtering
+    const batchesWithActualRemaining = batches.map(batch => {
+      const actualQuantityRemaining = (batch.quantityIn || 0) - (batch.quantitySold || 0);
+      return {
+        ...batch,
+        actualQuantityRemaining: Math.max(0, actualQuantityRemaining)
+      };
+    });
+
+    // Filter to ONLY batches that have stock
+    const activeBatches = batchesWithActualRemaining.filter(batch => batch.actualQuantityRemaining > 0);
+
+    // Find the current active batch using FIFO logic (first batch with stock)
+    const currentActiveBatch = activeBatches.length > 0 ? activeBatches[0] : null;
 
     const store = await Store.findOne({ userId: product.userId }).lean();
 
@@ -45,36 +58,22 @@ export async function GET(request, { params }) {
       );
     }
 
-    // Calculate actual remaining quantities and filter truly active batches
-    const activeBatches = allBatches
-      .map(batch => {
-        // Calculate actual remaining quantity
-        const actualQuantityRemaining = batch.quantityIn - batch.quantitySold;
-        return {
-          ...batch,
-          quantityRemaining: Math.max(0, actualQuantityRemaining) // Ensure non-negative
-        };
-      })
-      .filter(batch => batch.quantityRemaining > 0); // Only include batches with actual stock
-
     // Calculate batch-based pricing and availability
-    let currentPrice = product.sellingPrice; // fallback to inventory price
-    let currentCostPrice = product.costPrice; // fallback to inventory cost
+    let currentPrice = product.sellingPrice; // fallback
+    let currentCostPrice = product.costPrice; // fallback
     let totalAvailableQuantity = 0;
     let priceRange = { min: null, max: null };
     let hasBatches = activeBatches.length > 0;
     let currentBatch = null;
 
-    if (hasBatches) {
-      // Calculate total available quantity from all truly active batches
-      totalAvailableQuantity = activeBatches.reduce((sum, batch) => sum + batch.quantityRemaining, 0);
+    if (currentActiveBatch) {
+      // Use the FIRST batch with stock (FIFO) for current pricing
+      currentBatch = currentActiveBatch;
+      currentPrice = currentActiveBatch.sellingPrice;
+      currentCostPrice = currentActiveBatch.costPrice;
       
-      // Get current price from the FIRST batch that has actual stock (FIFO)
-      currentBatch = activeBatches[0]; // This is the oldest batch with stock
-      if (currentBatch) {
-        currentPrice = currentBatch.sellingPrice;
-        currentCostPrice = currentBatch.costPrice;
-      }
+      // Calculate total available quantity from all batches with stock
+      totalAvailableQuantity = activeBatches.reduce((sum, batch) => sum + batch.actualQuantityRemaining, 0);
       
       // Calculate price range across all active batches
       const prices = activeBatches.map(batch => batch.sellingPrice);
@@ -84,16 +83,23 @@ export async function GET(request, { params }) {
       };
     } else {
       // No active batches with stock, use inventory stock if batch system not in use
-      totalAvailableQuantity = product.quantityInStock;
+      totalAvailableQuantity = product.quantityInStock || 0;
     }
+
+    // Calculate weighted averages across all batches (for reference)
+    const totalQuantityIn = batchesWithActualRemaining.reduce((sum, batch) => sum + (batch.quantityIn || 0), 0);
+    const weightedSellingSum = batchesWithActualRemaining.reduce((sum, batch) => 
+      sum + ((batch.sellingPrice || 0) * (batch.quantityIn || 0)), 0
+    );
+    const averageSellingPrice = totalQuantityIn > 0 ? weightedSellingSum / totalQuantityIn : currentPrice;
 
     // Prepare enhanced product data
     const enhancedProduct = {
       ...product,
-      // Override pricing with batch-based pricing
+      // Override pricing with CURRENT BATCH pricing (FIFO)
       sellingPrice: currentPrice,
       
-      // Override quantity with batch-based quantity
+      // Override quantity with total available from all batches
       quantityInStock: totalAvailableQuantity,
       
       // Batch information - only include batches with actual stock
@@ -102,7 +108,7 @@ export async function GET(request, { params }) {
         batchCode: batch.batchCode,
         quantityIn: batch.quantityIn,
         quantitySold: batch.quantitySold,
-        quantityRemaining: batch.quantityRemaining,
+        quantityRemaining: batch.actualQuantityRemaining,
         sellingPrice: batch.sellingPrice,
         dateReceived: batch.dateReceived,
         expiryDate: batch.expiryDate,
@@ -114,18 +120,34 @@ export async function GET(request, { params }) {
       
       // Batch metadata
       batchInfo: {
-        hasBatches,
+        hasBatches: hasBatches,
         totalBatches: activeBatches.length,
         totalAvailableQuantity,
         currentBatchId: currentBatch?._id,
         currentBatchCode: currentBatch?.batchCode,
-        priceRange: hasBatches ? priceRange : null,
-        oldestBatchDate: hasBatches ? activeBatches[0]?.dateReceived : null,
-        newestBatchDate: hasBatches ? activeBatches[activeBatches.length - 1]?.dateReceived : null,
-        averagePrice: hasBatches ? activeBatches.reduce((sum, batch) => sum + batch.sellingPrice, 0) / activeBatches.length : currentPrice
+        currentBatchRemaining: currentBatch ? currentBatch.actualQuantityRemaining : 0,
+        priceRange: activeBatches.length > 0 ? priceRange : null,
+        oldestBatchDate: activeBatches.length > 0 ? activeBatches[0]?.dateReceived : null,
+        newestBatchDate: activeBatches.length > 0 ? activeBatches[activeBatches.length - 1]?.dateReceived : null,
+        averagePrice: averageSellingPrice,
+        methodology: 'FIFO - First In, First Out (oldest batches sold first)',
+        debugInfo: {
+          totalBatchesFound: batches.length,
+          batchesWithStock: activeBatches.length,
+          currentBatchPrice: currentPrice,
+          fallbackPrice: product.sellingPrice
+        }
       },
       
-      // Remove cost price from client response for security
+      // Pricing information
+      pricing: {
+        current: currentPrice, // Current selling price from FIFO batch
+        average: averageSellingPrice, // Weighted average across all batches
+        hasVariablePricing: priceRange && priceRange.min !== priceRange.max,
+        range: priceRange
+      },
+      
+      // Remove sensitive pricing from client response
       costPrice: undefined,
       batchCostPrice: undefined
     };
@@ -134,6 +156,16 @@ export async function GET(request, { params }) {
       success: true,
       product: enhancedProduct,
       store,
+      batchInfo: {
+        note: 'Pricing reflects current active batch using FIFO methodology',
+        methodology: 'First In, First Out (FIFO) - oldest batches are sold first',
+        currentBatch: currentBatch ? {
+          batchCode: currentBatch.batchCode,
+          remaining: currentBatch.actualQuantityRemaining,
+          price: currentPrice,
+          dateReceived: currentBatch.dateReceived
+        } : null
+      }
     });
   } catch (error) {
     console.error("Error fetching product:", error);

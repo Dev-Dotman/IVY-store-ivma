@@ -140,20 +140,16 @@ inventoryBatchSchema.virtual('turnoverRate').get(function() {
   return (this.quantitySold / this.quantityIn) * 100;
 });
 
-// Pre-save middleware
+// Pre-save middleware - IMPROVED
 inventoryBatchSchema.pre('save', function(next) {
-  // Auto-calculate quantity remaining
-  this.quantityRemaining = this.quantityIn - this.quantitySold;
+  // Calculate actual quantity remaining
+  const actualRemaining = this.quantityIn - this.quantitySold;
+  this.quantityRemaining = Math.max(0, actualRemaining);
   
-  // Ensure quantity remaining is not negative
-  if (this.quantityRemaining < 0) {
-    this.quantityRemaining = 0;
-  }
-  
-  // Update status based on quantity and expiry
-  if (this.quantityRemaining <= 0) {
+  // Update status based on ACTUAL remaining quantity (not stored quantityRemaining)
+  if (actualRemaining <= 0) {
     this.status = 'depleted';
-  } else if (this.isExpired) {
+  } else if (this.expiryDate && new Date() > this.expiryDate) {
     this.status = 'expired';
   } else {
     this.status = 'active';
