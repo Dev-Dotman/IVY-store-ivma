@@ -44,6 +44,7 @@ import useStoreStore from "@/stores/storeStore";
 import SignInModal from "./auth/SignInModal";
 import SignUpModal from "./auth/SignUpModal";
 import ForgotPasswordModal from "./auth/ForgotPasswordModal";
+import { useProducts } from "@/hooks/useProducts";
 
 // Register GSAP plugins
 if (typeof window !== "undefined") {
@@ -52,59 +53,10 @@ if (typeof window !== "undefined") {
 
 export default function StoreWebsite({ store }) {
   const router = useRouter();
-
-  // Update favicon when component mounts - SIMPLIFIED APPROACH
-  useEffect(() => {
-    const updateFavicon = () => {
-      const faviconUrl = store?.branding?.logo;
-      if (!faviconUrl) return;
-
-      try {
-        // Just update existing favicon href, don't remove/add elements
-        let iconLink = document.querySelector('link[rel="icon"]');
-        if (iconLink) {
-          iconLink.href = faviconUrl + `?v=${Date.now()}`;
-        } else {
-          // Only create if doesn't exist
-          iconLink = document.createElement('link');
-          iconLink.rel = 'icon';
-          iconLink.href = faviconUrl + `?v=${Date.now()}`;
-          document.head.appendChild(iconLink);
-        }
-
-        // Update apple touch icon
-        let appleIcon = document.querySelector('link[rel="apple-touch-icon"]');
-        if (appleIcon) {
-          appleIcon.href = faviconUrl + `?v=${Date.now()}`;
-        } else {
-          appleIcon = document.createElement('link');
-          appleIcon.rel = 'apple-touch-icon';
-          appleIcon.href = faviconUrl + `?v=${Date.now()}`;
-          document.head.appendChild(appleIcon);
-        }
-      } catch (error) {
-        console.error('Favicon update error:', error);
-      }
-    };
-
-    updateFavicon();
-
-    // Cleanup: restore default favicon
-    return () => {
-      try {
-        const defaultFavicon = '/favicon.ico';
-        const iconLink = document.querySelector('link[rel="icon"]');
-        if (iconLink) {
-          iconLink.href = defaultFavicon;
-        }
-      } catch (error) {
-        console.error('Favicon cleanup error:', error);
-      }
-    };
-  }, [store?.branding?.logo]);
-
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Replace products fetch with TanStack Query
+  const { data: products = [], isLoading: loading, error } = useProducts(store._id);
+  
   const [isMobile, setIsMobile] = useState(false);
   
   // Filter states
@@ -157,29 +109,6 @@ export default function StoreWebsite({ store }) {
     // Cleanup
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  // Fetch inventory products
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/stores/${store._id}/products`);
-        const data = await response.json();
-
-        if (data.success) {
-          setProducts(data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (store._id) {
-      fetchProducts();
-    }
-  }, [store._id]);
 
   // Set store in Zustand when component mounts
   useEffect(() => {
@@ -940,6 +869,19 @@ export default function StoreWebsite({ store }) {
                 style={{ borderTopColor: primaryColor }}
               ></div>
               <p className="loading-text mt-4 text-sm text-gray-600">Loading products...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-20">
+              <div className="text-8xl mb-4">⚠️</div>
+              <h4 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Products</h4>
+              <p className="text-sm text-gray-600 mb-4">{error.message}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 text-white rounded-xl font-medium hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: primaryColor }}
+              >
+                Retry
+              </button>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-20" ref={emptyStateRef}>

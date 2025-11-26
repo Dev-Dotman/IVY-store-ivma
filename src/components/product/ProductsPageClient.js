@@ -6,10 +6,14 @@ import StoreHeader from "@/components/store/StoreHeader";
 import StoreFooter from "@/components/store/StoreFooter";
 import ProductCard from "@/components/store/ProductCard";
 import ProductCardMobile from "@/components/store/ProductCardMobile";
+import { useProducts } from "@/hooks/useProducts";
 
-export default function ProductsPageClient({ store, products, slug }) {
+export default function ProductsPageClient({ store, products: initialProducts, slug }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // Use TanStack Query with initial data from server
+  const { data: products = initialProducts, isLoading, error } = useProducts(store._id);
   
   const [isMobile, setIsMobile] = useState(false);
   const [sortBy, setSortBy] = useState("default");
@@ -250,7 +254,28 @@ export default function ProductsPageClient({ store, products, slug }) {
         </div>
 
         {/* Products Grid/List */}
-        {filteredProducts.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-20">
+            <div 
+              className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-4 mb-4"
+              style={{ borderTopColor: primaryColor }}
+            ></div>
+            <p className="text-gray-600">Loading products...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <div className="text-8xl mb-4">⚠️</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Products</h3>
+            <p className="text-gray-600 mb-4">{error.message}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 text-white rounded-xl font-medium hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: primaryColor }}
+            >
+              Retry
+            </button>
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-8xl mb-4">{searchQuery ? '🔍' : '📦'}</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">

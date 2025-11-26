@@ -3,43 +3,17 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Heart, Tag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsInWishlist, useWishlistMutations } from '@/hooks/useWishlist';
 
 export default function ProductCardMobile({ product, primaryColor, currency, secondaryColor }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
-  const [liked, setLiked] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [addingToWishlist, setAddingToWishlist] = useState(false);
-  const [checkingWishlist, setCheckingWishlist] = useState(false);
-
-  // Check if item is in user's wishlist when component mounts
-  useEffect(() => {
-    const checkWishlistStatus = async () => {
-      if (!isAuthenticated || !product._id) return;
-      
-      setCheckingWishlist(true);
-      try {
-        const response = await fetch('/api/wishlist', {
-          credentials: 'include'
-        });
-        const data = await response.json();
-        
-        if (response.ok && data.success && data.wishlist?.items) {
-          const isInWishlist = data.wishlist.items.some(item => 
-            (item.product._id || item.product) === product._id
-          );
-          setLiked(isInWishlist);
-        }
-      } catch (error) {
-        console.error('Error checking wishlist status:', error);
-      } finally {
-        setCheckingWishlist(false);
-      }
-    };
-
-    checkWishlistStatus();
-  }, [isAuthenticated, product._id]);
+  
+  // Use TanStack Query hooks
+  const liked = useIsInWishlist(product._id);
+  const { addToWishlist, removeFromWishlist } = useWishlistMutations();
 
   const formatPrice = (price) => {
     if (currency === 'NGN') {
@@ -49,7 +23,6 @@ export default function ProductCardMobile({ product, primaryColor, currency, sec
   };
 
   const handleProductClick = () => {
-    // Extract store slug from current pathname
     const storeSlug = pathname.split('/')[1];
     router.push(`/${storeSlug}/product/${product._id}`);
   };
@@ -58,58 +31,27 @@ export default function ProductCardMobile({ product, primaryColor, currency, sec
     e.stopPropagation();
     
     if (!isAuthenticated) {
-      // Redirect to sign in
       const storeSlug = pathname.split('/')[1];
       router.push(`/${storeSlug}?signin=true`);
       return;
     }
 
-    setAddingToWishlist(true);
-    
     try {
       if (liked) {
-        // Remove from wishlist
-        const response = await fetch(`/api/wishlist/${product._id}`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          setLiked(false);
-        } else {
-          console.error('Failed to remove from wishlist');
-        }
+        await removeFromWishlist.mutateAsync(product._id);
       } else {
-        // Add to wishlist
-        const response = await fetch('/api/wishlist', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            productId: product._id,
-            priority: 'medium',
-            notes: '',
-            notifications: {
-              priceDropAlert: true,
-              backInStockAlert: true
-            }
-          })
+        await addToWishlist.mutateAsync({
+          productId: product._id,
+          priority: 'medium',
+          notes: ''
         });
-        
-        if (response.ok) {
-          setLiked(true);
-        } else {
-          console.error('Failed to add to wishlist');
-        }
       }
     } catch (error) {
       console.error('Error updating wishlist:', error);
-    } finally {
-      setAddingToWishlist(false);
     }
   };
+
+  const isUpdating = addToWishlist.isPending || removeFromWishlist.isPending;
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-200 group cursor-pointer"
@@ -167,10 +109,10 @@ export default function ProductCardMobile({ product, primaryColor, currency, sec
           {isAuthenticated && (
             <button
               onClick={handleWishlistToggle}
-              disabled={addingToWishlist || checkingWishlist}
+              disabled={isUpdating}
               className="absolute top-2 right-2 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all shadow-sm disabled:opacity-50 z-10"
             >
-              {addingToWishlist || checkingWishlist ? (
+              {isUpdating ? (
                 <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
               ) : (
                 <Heart 

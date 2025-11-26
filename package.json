@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.11",
+    "@tanstack/react-query-devtools": "^5.91.1",
     "bcryptjs": "^3.0.2",
     "gsap": "^3.13.0",
     "install": "^0.13.0",
