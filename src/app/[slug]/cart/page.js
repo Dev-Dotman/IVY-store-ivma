@@ -38,6 +38,25 @@ export default function StoreCartPage({ params }) {
   const [orderStores, setOrderStores] = useState([]);
   const [orderNumber, setOrderNumber] = useState('');
   const [redirectingToWhatsApp, setRedirectingToWhatsApp] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Screen size detection
+  useEffect(() => {
+    const detectScreenSize = () => {
+      if (typeof window !== 'undefined') {
+        return window.innerWidth < 768;
+      }
+      return false;
+    };
+
+    const handleResize = () => {
+      setIsMobile(detectScreenSize());
+    };
+
+    setIsMobile(detectScreenSize());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Fetch store if not loaded
   useEffect(() => {
@@ -357,44 +376,50 @@ export default function StoreCartPage({ params }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header with Store Branding */}
+      {/* Header - Mobile Optimized */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.push(`/${resolvedParams.slug}`)}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
+                className="flex items-center gap-1 md:gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
               >
-                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                <span className="font-medium">{store?.storeName || 'Store'}</span>
+                <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 group-hover:-translate-x-1 transition-transform" />
+                <span className="font-medium text-sm md:text-base truncate max-w-[120px] md:max-w-none">
+                  {currentStore?.storeName || 'Store'}
+                </span>
               </button>
-              <span className="text-gray-300">›</span>
-              <span className="font-medium text-gray-900">Cart</span>
+              {!isMobile && (
+                <>
+                  <span className="text-gray-300">›</span>
+                  <span className="font-medium text-gray-900">Cart</span>
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-gray-600" />
-              <span className="font-semibold text-gray-900">{getCartCount()} Items</span>
+            <div className="flex items-center gap-1 md:gap-2">
+              <ShoppingBag className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+              <span className="font-semibold text-gray-900 text-sm md:text-base">{getCartCount()}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">YOUR CART</h1>
+      {/* Main Content - Mobile Optimized */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-8">YOUR CART</h1>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid lg:grid-cols-3 gap-4 md:gap-8">
+          {/* Cart Items - Mobile Optimized */}
+          <div className="lg:col-span-2 space-y-3 md:space-y-6">
             {storeGroups.map((storeGroup, idx) => (
-              <div key={idx} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <div key={idx} className="bg-white rounded-xl md:rounded-2xl border border-gray-100 overflow-hidden">
                 {storeGroup.storeSnapshot && (
                   <div 
-                    className="px-6 py-3 border-b border-gray-100"
+                    className="px-3 md:px-6 py-2 md:py-3 border-b border-gray-100"
                     style={{ backgroundColor: `${primaryColor}10` }}
                   >
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm md:text-base truncate">
                       From: {storeGroup.storeSnapshot.storeName}
                     </p>
                   </div>
@@ -402,10 +427,14 @@ export default function StoreCartPage({ params }) {
 
                 <div className="divide-y divide-gray-100">
                   {storeGroup.items.map((item) => (
-                    <div key={item._id} className="p-6">
-                      <div className="flex gap-4">
+                    <div key={item._id} className="p-3 md:p-6">
+                      <div className="flex gap-2 md:gap-4">
+                        {/* Product Image - Smaller on mobile */}
                         <div className="flex-shrink-0">
-                          <div className="w-32 h-32 rounded-xl overflow-hidden" style={{ backgroundColor: secondaryColor }}>
+                          <div 
+                            className={`${isMobile ? 'w-20 h-20' : 'w-32 h-32'} rounded-lg md:rounded-xl overflow-hidden`}
+                            style={{ backgroundColor: secondaryColor }}
+                          >
                             {item.productSnapshot?.image ? (
                               <img
                                 src={item.productSnapshot.image}
@@ -413,26 +442,26 @@ export default function StoreCartPage({ params }) {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-4xl">
+                              <div className={`w-full h-full flex items-center justify-center ${isMobile ? 'text-2xl' : 'text-4xl'}`}>
                                 📦
                               </div>
                             )}
                           </div>
                         </div>
 
+                        {/* Product Details - Mobile Optimized */}
                         <div className="flex-1 min-w-0">
-                          {/* ...existing item details... */}
-                          <div className="flex items-start justify-between gap-4 mb-2">
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          <div className="flex items-start justify-between gap-2 mb-1 md:mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-sm md:text-lg font-semibold text-gray-900 mb-0.5 md:mb-1 line-clamp-2">
                                 {item.productSnapshot?.productName}
                               </h3>
                               {item.productSnapshot?.category && (
-                                <p className="text-sm text-gray-500">
-                                  Category: {item.productSnapshot.category}
+                                <p className="text-xs md:text-sm text-gray-500">
+                                  {item.productSnapshot.category}
                                 </p>
                               )}
-                              {item.productSnapshot?.sku && (
+                              {!isMobile && item.productSnapshot?.sku && (
                                 <p className="text-xs text-gray-400 mt-1">
                                   SKU: {item.productSnapshot.sku}
                                 </p>
@@ -440,40 +469,41 @@ export default function StoreCartPage({ params }) {
                             </div>
                             <button
                               onClick={() => handleRemoveItem(item.product._id || item.product)}
-                              className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-1.5 md:p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
                               title="Remove item"
                             >
-                              <Trash2 className="w-5 h-5" />
+                              <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                             </button>
                           </div>
 
-                          <p className="text-2xl font-bold mb-4" style={{ color: primaryColor }}>
+                          <p className="text-lg md:text-2xl font-bold mb-2 md:mb-4" style={{ color: primaryColor }}>
                             {formatPrice(item.price)}
                           </p>
 
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden">
+                          {/* Quantity Controls - Mobile Optimized */}
+                          <div className="flex items-center gap-2 md:gap-4">
+                            <div className="flex items-center border border-gray-300 rounded-lg md:rounded-xl overflow-hidden">
                               <button
                                 onClick={() => handleQuantityChange(item.product._id || item.product, item.quantity - 1)}
                                 disabled={item.quantity <= 1 || updatingItemId === (item.product._id || item.product)}
-                                className="px-4 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-2 md:px-4 py-1.5 md:py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                               >
-                                <Minus className="w-4 h-4 text-gray-600" />
+                                <Minus className="w-3 h-3 md:w-4 md:h-4 text-gray-600" />
                               </button>
-                              <span className="px-6 py-2 font-semibold text-gray-900 min-w-[60px] text-center">
+                              <span className="px-3 md:px-6 py-1.5 md:py-2 font-semibold text-gray-900 min-w-[40px] md:min-w-[60px] text-center text-sm md:text-base">
                                 {item.quantity}
                               </span>
                               <button
                                 onClick={() => handleQuantityChange(item.product._id || item.product, item.quantity + 1)}
                                 disabled={updatingItemId === (item.product._id || item.product)}
-                                className="px-4 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="px-2 md:px-4 py-1.5 md:py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                               >
-                                <Plus className="w-4 h-4 text-gray-600" />
+                                <Plus className="w-3 h-3 md:w-4 md:h-4 text-gray-600" />
                               </button>
                             </div>
 
                             {updatingItemId === (item.product._id || item.product) && (
-                              <span className="text-sm text-gray-500">Updating...</span>
+                              <span className="text-xs md:text-sm text-gray-500">Updating...</span>
                             )}
                           </div>
                         </div>
@@ -485,78 +515,53 @@ export default function StoreCartPage({ params }) {
             ))}
           </div>
 
-          {/* Order Summary with Store Colors */}
+          {/* Order Summary - Mobile Optimized */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden sticky top-24">
-              <div className="p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
+            <div className={`bg-white rounded-xl md:rounded-2xl border border-gray-100 overflow-hidden ${!isMobile && 'sticky top-24'}`}>
+              <div className="p-4 md:p-6">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Order Summary</h2>
 
-                {/* ...existing summary with store color theming... */}
-                <div className="space-y-4 mb-6">
+                <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="text-lg font-semibold text-gray-900">
+                    <span className="text-sm md:text-base text-gray-600">Subtotal</span>
+                    <span className="text-base md:text-lg font-semibold text-gray-900">
                       {formatPrice(cart.subtotal || 0)}
                     </span>
                   </div>
 
                   {cart.discount > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Discount</span>
-                      <span className="text-lg font-semibold text-red-600">
+                      <span className="text-sm md:text-base text-gray-600">Discount</span>
+                      <span className="text-base md:text-lg font-semibold text-red-600">
                         -{formatPrice(cart.discount)}
                       </span>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Delivery Fee</span>
-                    <span className="text-lg font-semibold text-gray-900">
+                    <span className="text-sm md:text-base text-gray-600">Delivery Fee</span>
+                    <span className="text-base md:text-lg font-semibold text-gray-900">
                       {formatPrice(cart.shipping || 0)}
                     </span>
                   </div>
 
-                  <div className="border-t border-gray-200 pt-4">
+                  <div className="border-t border-gray-200 pt-3 md:pt-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-lg font-semibold text-gray-900">Total</span>
-                      <span className="text-2xl font-bold" style={{ color: primaryColor }}>
+                      <span className="text-base md:text-lg font-semibold text-gray-900">Total</span>
+                      <span className="text-xl md:text-2xl font-bold" style={{ color: primaryColor }}>
                         {formatPrice(cart.total || 0)}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Promo Code */}
-                {/* <div className="mb-6">
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        placeholder="Add promo code"
-                        className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 text-gray-900"
-                        style={{ '--tw-ring-color': primaryColor }}
-                      />
-                    </div>
-                    <button
-                      onClick={handleApplyCoupon}
-                      disabled={isApplyingCoupon || !couponCode.trim()}
-                      className="px-6 py-3 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isApplyingCoupon ? "..." : "Apply"}
-                    </button>
-                  </div>
-                </div> */}
-
-                {/* Place Order Button */}
+                {/* Place Order Button - Mobile Optimized */}
                 <button
                   onClick={handlePlaceOrder}
-                  className="w-full py-4 text-white rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 text-lg"
+                  className="w-full py-3 md:py-4 text-white rounded-xl font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 text-base md:text-lg"
                   style={{ backgroundColor: primaryColor }}
                 >
-                  <CheckCircle className="w-5 h-5" />
+                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
                   Place Order
                 </button>
               </div>

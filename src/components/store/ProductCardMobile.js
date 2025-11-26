@@ -151,16 +151,36 @@ export default function ProductCardMobile({ product, primaryColor, currency, sec
             </div>
           )}
           
-          {/* Stock Badge - Smaller for mobile */}
+          {/* Stock Badge - Top left */}
           {product.quantityInStock <= 0 && (
-            <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+            <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm">
               Out of Stock
             </div>
           )}
           {product.quantityInStock > 0 && product.quantityInStock <= product.reorderLevel && (
-            <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+            <div className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full shadow-sm">
               Low Stock
             </div>
+          )}
+
+          {/* Wishlist Button - Top right corner */}
+          {isAuthenticated && (
+            <button
+              onClick={handleWishlistToggle}
+              disabled={addingToWishlist || checkingWishlist}
+              className="absolute top-2 right-2 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all shadow-sm disabled:opacity-50 z-10"
+            >
+              {addingToWishlist || checkingWishlist ? (
+                <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Heart 
+                  className={`w-4 h-4 transition-all duration-200 ${liked ? 'scale-110' : ''}`}
+                  style={liked ? { color: primaryColor } : { color: '#6B7280' }}
+                  strokeWidth={liked ? 0 : 2}
+                  fill={liked ? primaryColor : 'none'}
+                />
+              )}
+            </button>
           )}
         </div>
       </div>
@@ -177,34 +197,12 @@ export default function ProductCardMobile({ product, primaryColor, currency, sec
           {product.category}
         </p>
 
-        {/* Price Row - No location on mobile */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1">
-            <Tag className="w-3 h-3 text-gray-500" />
-            <span className="text-xs font-medium text-gray-900">
-             {formatPrice(product.sellingPrice)}
-            </span>
-          </div>
-          
-          {/* Wishlist button moved to top right area */}
-          {isAuthenticated && (
-            <button
-              onClick={handleWishlistToggle}
-              disabled={addingToWishlist || checkingWishlist}
-              className="w-6 h-6 bg-gray-50 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-colors disabled:opacity-50"
-            >
-              {addingToWishlist || checkingWishlist ? (
-                <div className="w-2.5 h-2.5 border border-gray-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Heart 
-                  className={`w-3 h-3 transition-all duration-200 ${liked ? 'fill-current scale-110' : 'text-gray-600'}`}
-                  style={liked ? { color: primaryColor } : {}}
-                  strokeWidth={liked ? 0 : 2}
-                  fill={liked ? primaryColor : 'none'}
-                />
-              )}
-            </button>
-          )}
+        {/* Price Row - Simplified */}
+        <div className="flex items-center gap-1 mb-3">
+          <Tag className="w-3 h-3 text-gray-500" />
+          <span className="text-xs font-medium text-gray-900">
+           {formatPrice(product.sellingPrice)}
+          </span>
         </div>
 
         {/* Single Button Row - Simplified for mobile */}

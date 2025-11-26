@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import StoreHeader from "./store/StoreHeader";
@@ -10,7 +11,34 @@ import CategoryFilterModal from "./store/CategoryFilterModal";
 import PriceFilterModal from "./store/PriceFilterModal";
 import AvailabilityFilterModal from "./store/AvailabilityFilterModal";
 import MobileFilterDropdown from "./ui/MobileFilterDropdown";
-import { ChevronDown } from "lucide-react";
+import { 
+  ChevronDown,
+  Shirt,
+  Smartphone,
+  UtensilsCrossed,
+  BookOpen,
+  ToyBrick,
+  Sparkles,
+  Dumbbell,
+  Gem,
+  Armchair,
+  Palette,
+  ShoppingBag,
+  Watch,
+  Pill,
+  PawPrint,
+  Flower2,
+  Car,
+  Music,
+  Home,
+  ChefHat,
+  Briefcase,
+  Baby,
+  Scissors,
+  Package,
+  Search,
+  X
+} from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import useStoreStore from "@/stores/storeStore";
 import SignInModal from "./auth/SignInModal";
@@ -23,6 +51,8 @@ if (typeof window !== "undefined") {
 }
 
 export default function StoreWebsite({ store }) {
+  const router = useRouter();
+
   // Update favicon when component mounts - SIMPLIFIED APPROACH
   useEffect(() => {
     const updateFavicon = () => {
@@ -81,6 +111,9 @@ export default function StoreWebsite({ store }) {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPrice, setSelectedPrice] = useState("all");
   const [selectedAvailability, setSelectedAvailability] = useState("all");
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Modal states
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -155,6 +188,46 @@ export default function StoreWebsite({ store }) {
     }
   }, [store, setStore]);
 
+  // Function to get category icon - NOW USING LUCIDE ICONS
+  const getCategoryIcon = (category) => {
+    const categoryLower = category.toLowerCase();
+    const iconMap = {
+      'clothing': Shirt,
+      'electronics': Smartphone,
+      'food': UtensilsCrossed,
+      'books': BookOpen,
+      'toys': ToyBrick,
+      'beauty': Sparkles,
+      'sports': Dumbbell,
+      'jewelry': Gem,
+      'furniture': Armchair,
+      'art': Palette,
+      'shoes': ShoppingBag,
+      'bags': ShoppingBag,
+      'accessories': Watch,
+      'health': Pill,
+      'pets': PawPrint,
+      'garden': Flower2,
+      'automotive': Car,
+      'music': Music,
+      'home': Home,
+      'kitchen': ChefHat,
+      'office': Briefcase,
+      'baby': Baby,
+      'crafts': Scissors,
+      'default': Package
+    };
+    
+    // Find matching icon or use default
+    for (const [key, Icon] of Object.entries(iconMap)) {
+      if (categoryLower.includes(key)) {
+        return Icon;
+      }
+    }
+    
+    return iconMap.default;
+  };
+
   // Get unique categories from products
   const categoryOptions = useMemo(() => {
     const categories = [...new Set(products.map((p) => p.category))];
@@ -162,6 +235,27 @@ export default function StoreWebsite({ store }) {
       { value: "all", label: "All Categories" },
       ...categories.map((cat) => ({ value: cat, label: cat })),
     ];
+  }, [products]);
+
+  // Get unique categories with counts - NOW getCategoryIcon is defined
+  const categoriesWithCounts = useMemo(() => {
+    if (products.length === 0) return [];
+    
+    const categoryMap = {};
+    products.forEach(product => {
+      if (product.category) {
+        if (!categoryMap[product.category]) {
+          categoryMap[product.category] = {
+            name: product.category,
+            count: 0,
+            icon: getCategoryIcon(product.category)
+          };
+        }
+        categoryMap[product.category].count++;
+      }
+    });
+    
+    return Object.values(categoryMap);
   }, [products]);
 
   // Price range options
@@ -181,9 +275,21 @@ export default function StoreWebsite({ store }) {
     { value: "out-of-stock", label: "Out of Stock" },
   ];
 
-  // Filter products
+  // Filter products - NOW INCLUDING SEARCH
   const filteredProducts = useMemo(() => {
     let filtered = [...products];
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((p) => 
+        p.productName.toLowerCase().includes(query) ||
+        p.category.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query) ||
+        p.brand?.toLowerCase().includes(query) ||
+        p.sku?.toLowerCase().includes(query)
+      );
+    }
 
     // Filter by category
     if (selectedCategory !== "all") {
@@ -217,7 +323,12 @@ export default function StoreWebsite({ store }) {
     }
 
     return filtered;
-  }, [products, selectedCategory, selectedPrice, selectedAvailability]);
+  }, [products, searchQuery, selectedCategory, selectedPrice, selectedAvailability]);
+
+  const handleCategoryClick = (categoryName) => {
+    // Navigate to products page with category filter
+    router.push(`/${store.ivmaWebsite?.websitePath}/products?category=${encodeURIComponent(categoryName)}`);
+  };
 
   // Get current filter labels
   const getCategoryLabel = () => {
@@ -551,6 +662,13 @@ export default function StoreWebsite({ store }) {
     };
   }, []);
 
+  // Limit displayed products to 8
+  const displayedProducts = useMemo(() => {
+    return filteredProducts.slice(0, 8);
+  }, [filteredProducts]);
+
+  const hasMoreProducts = filteredProducts.length > 8;
+
   return (
     <div className="min-h-screen bg-white relative" >
       {/* Animated Background Shapes */}
@@ -630,9 +748,133 @@ export default function StoreWebsite({ store }) {
           </div>
         )}
 
-        {/* Filters Bar */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8 relative z-40" ref={filtersRef}>
-          {/* Mobile Filter Dropdown - Only visible on mobile */}
+        {/* Mobile Categories Section - Only show if more than 1 category */}
+        {isMobile && categoriesWithCounts.length > 1 && (
+          <div className="mb-6 -mx-6">
+            <div className="px-6 flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-gray-900">Category</h3>
+              <button
+                onClick={() => router.push(`/${store.ivmaWebsite?.websitePath}/products`)}
+                className="text-sm font-medium"
+                style={{ color: primaryColor }}
+              >
+                See All
+              </button>
+            </div>
+            
+            {/* Horizontal Scrollable Categories */}
+            <div className="overflow-x-auto scrollbar-hide px-6">
+              <div className="flex gap-4 pb-2">
+                {categoriesWithCounts.map((category, index) => {
+                  const IconComponent = category.icon;
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => handleCategoryClick(category.name)}
+                      className={`flex flex-col items-center flex-shrink-0 transition-all duration-200 ${
+                        selectedCategory === category.name ? 'scale-105' : ''
+                      }`}
+                    >
+                      <div 
+                        className="w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-all duration-200"
+                        style={{ 
+                          backgroundColor: selectedCategory === category.name 
+                            ? `${primaryColor}20` 
+                            : `${primaryColor}10`,
+                          border: selectedCategory === category.name 
+                            ? `2px solid ${primaryColor}` 
+                            : 'none'
+                        }}
+                      >
+                        <IconComponent 
+                          className="w-5 h-7" 
+                          style={{ 
+                            color: selectedCategory === category.name 
+                              ? primaryColor 
+                              : '#6B7280'
+                          }}
+                        />
+                      </div>
+                      <span 
+                        className="text-xs font-medium text-center max-w-[70px] truncate"
+                        style={{ 
+                          color: selectedCategory === category.name 
+                            ? primaryColor 
+                            : '#374151'
+                        }}
+                      >
+                        {category.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Search Bar - Icon moved outside to the right */}
+        <div className="mb-8 relative z-40" ref={filtersRef}>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="  Search products, brands, categories..."
+                className="w-full pl-4 pr-10 py-3 text-gray-900 placeholder-gray-400 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all text-sm sm:text-base shadow-sm"
+                style={{ 
+                  backgroundColor: `${primaryColor}05`,
+                  borderColor: searchQuery ? primaryColor : `${primaryColor}20`,
+                  '--tw-ring-color': primaryColor
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-gray-100"
+                >
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              )}
+            </div>
+            
+            {/* Search Icon Button - Outside */}
+            <button
+              onClick={() => {
+                // Optional: trigger search action
+                console.log('Searching for:', searchQuery);
+              }}
+              className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center transition-all hover:opacity-90 shadow-sm"
+              style={{ backgroundColor: primaryColor }}
+            >
+              <Search className="w-5 h-5 text-white" />
+            </button>
+          </div>
+          
+          {/* Search Results Count */}
+          {searchQuery && (
+            <div className="mt-3 flex items-center justify-between px-2">
+              <p className="text-sm text-gray-600">
+                Found <span className="font-semibold" style={{ color: primaryColor }}>
+                  {filteredProducts.length}
+                </span> {filteredProducts.length === 1 ? 'result' : 'results'} for "{searchQuery}"
+              </p>
+              {filteredProducts.length > 0 && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-xs font-medium hover:underline"
+                  style={{ color: primaryColor }}
+                >
+                  Clear search
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* COMMENTED OUT: Filters Bar */}
+        {/* <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-8 relative z-40" ref={filtersRef}>
           {isMobile && ( <div className="w-full sm:hidden relative z-50">
             <MobileFilterDropdown
               categoryOptions={categoryOptions}
@@ -644,7 +886,6 @@ export default function StoreWebsite({ store }) {
               onCategorySelect={setSelectedCategory}
               onPriceSelect={setSelectedPrice}
               onAvailabilitySelect={setSelectedAvailability}
-              // Add modal trigger functions
               onCategoryModalOpen={() => setShowCategoryModal(true)}
               onPriceModalOpen={() => setShowPriceModal(true)}
               onAvailabilityModalOpen={() => setShowAvailabilityModal(true)}
@@ -653,13 +894,9 @@ export default function StoreWebsite({ store }) {
             />
           </div>)}
 
-          {/* Desktop Filter Buttons - Hidden on mobile */}
           { !isMobile && ( <div className="flex flex-wrap gap-2">
             <button 
-              onClick={() => {
-                console.log('Opening category modal');
-                setShowCategoryModal(true);
-              }}
+              onClick={() => setShowCategoryModal(true)}
               className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:opacity-90 transition-colors flex items-center gap-2"
               style={{ backgroundColor: secondaryColor }}
             >
@@ -667,10 +904,7 @@ export default function StoreWebsite({ store }) {
               <ChevronDown className="w-4 h-4" />
             </button>
             <button 
-              onClick={() => {
-                console.log('Opening price modal');
-                setShowPriceModal(true);
-              }}
+              onClick={() => setShowPriceModal(true)}
               className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:opacity-90 transition-colors flex items-center gap-2"
               style={{ backgroundColor: secondaryColor }}
             >
@@ -678,10 +912,7 @@ export default function StoreWebsite({ store }) {
               <ChevronDown className="w-4 h-4" />
             </button>
             <button 
-              onClick={() => {
-                console.log('Opening availability modal');
-                setShowAvailabilityModal(true);
-              }}
+              onClick={() => setShowAvailabilityModal(true)}
               className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:opacity-90 transition-colors flex items-center gap-2"
               style={{ backgroundColor: secondaryColor }}
             >
@@ -689,7 +920,7 @@ export default function StoreWebsite({ store }) {
               <ChevronDown className="w-4 h-4" />
             </button>
           </div>)}
-        </div>
+        </div> */}
 
         {/* Products Section */}
         <div>
@@ -698,7 +929,7 @@ export default function StoreWebsite({ store }) {
               {isMobile ? 'Products' : ''}
             </h3>
             <span className="text-sm text-gray-600">
-              {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
+              {displayedProducts.length} of {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
             </span>
           </div>
 
@@ -712,43 +943,75 @@ export default function StoreWebsite({ store }) {
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="text-center py-20" ref={emptyStateRef}>
-              <div className="empty-emoji text-8xl mb-4">📦</div>
+              <div className="empty-emoji text-8xl mb-4">
+                {searchQuery ? '🔍' : '📦'}
+              </div>
               <h4 className="text-xl font-semibold text-gray-900 mb-2">
-                No Products Found
+                {searchQuery ? 'No Results Found' : 'No Products Found'}
               </h4>
-              <p className="text-sm text-gray-600">
-                Try adjusting your filters to see more products
+              <p className="text-sm text-gray-600 mb-4">
+                {searchQuery 
+                  ? `We couldn't find any products matching "${searchQuery}"` 
+                  : 'Try adjusting your filters to see more products'}
               </p>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="px-6 py-3 text-white rounded-xl font-medium hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  Clear Search
+                </button>
+              )}
             </div>
           ) : (
-            <div 
-              className={`grid ${
-                isMobile 
-                  ? 'grid-cols-2 gap-3' 
-                  : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'
-              }`}
-              ref={productsGridRef}
-            >
-              {filteredProducts.map((product) => (
-                isMobile ? (
-                  <ProductCardMobile
-                    key={product._id}
-                    product={product}
-                    primaryColor={primaryColor}
-                    secondaryColor={secondaryColor}
-                    currency={store.settings?.currency || "NGN"}
-                  />
-                ) : (
-                  <ProductCard
-                    key={product._id}
-                    product={product}
-                    primaryColor={primaryColor}
-                    secondaryColor={secondaryColor}
-                    currency={store.settings?.currency || "NGN"}
-                  />
-                )
-              ))}
-            </div>
+            <>
+              <div 
+                className={`grid ${
+                  isMobile 
+                    ? 'grid-cols-2 gap-3' 
+                    : 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8'
+                }`}
+                ref={productsGridRef}
+              >
+                {displayedProducts.map((product) => (
+                  isMobile ? (
+                    <ProductCardMobile
+                      key={product._id}
+                      product={product}
+                      primaryColor={primaryColor}
+                      secondaryColor={secondaryColor}
+                      currency={store.settings?.currency || "NGN"}
+                    />
+                  ) : (
+                    <ProductCard
+                      key={product._id}
+                      product={product}
+                      primaryColor={primaryColor}
+                      secondaryColor={secondaryColor}
+                      currency={store.settings?.currency || "NGN"}
+                    />
+                  )
+                ))}
+              </div>
+
+              {/* See All Button - Only show if there are more than 8 products */}
+                <div className="flex items-center justify-center mt-12">
+                  <button
+                    onClick={() => router.push(`/${store.ivmaWebsite?.websitePath}/products`)}
+                    className="inline-flex items-center gap-2 px-8 py-4 text-white rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    <Package className="w-5 h-5" />
+                    <span>See All Products</span>
+                    <span 
+                      className="ml-2 px-2.5 py-0.5 bg-white/20 rounded-full text-sm font-bold"
+                    >
+                      {filteredProducts.length}
+                    </span>
+                  </button>
+                </div>
+            </>
           )}
         </div>
       </main>
@@ -819,6 +1082,16 @@ export default function StoreWebsite({ store }) {
         selectedAvailability={selectedAvailability}
         onSelect={setSelectedAvailability}
       />
+
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 }
