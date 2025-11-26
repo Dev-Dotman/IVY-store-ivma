@@ -27,8 +27,10 @@ export default function StoreCartPage({ params }) {
   const [orderError, setOrderError] = useState(null);
   const [shippingAddress, setShippingAddress] = useState({
     phone: '',
+    street: '',
     city: '',
-    state: ''
+    state: '',
+    landmark: '' // Optional landmark for easier delivery
   });
   const [isValidatingWhatsApp, setIsValidatingWhatsApp] = useState(false);
   const [whatsAppValidated, setWhatsAppValidated] = useState(false);
@@ -219,8 +221,10 @@ export default function StoreCartPage({ params }) {
   const handlePlaceOrder = () => {
     setShippingAddress({
       phone: customer?.phone || '',
+      street: '',
       city: '',
-      state: ''
+      state: '',
+      landmark: ''
     });
     setWhatsAppValidated(false);
     setShowOrderModal(true);
@@ -257,8 +261,9 @@ export default function StoreCartPage({ params }) {
   };
 
   const handleConfirmOrder = async () => {
-    if (!shippingAddress.phone || !shippingAddress.city || !shippingAddress.state) {
-      setOrderError('Please provide your phone number, city, and state');
+    // Validate all required fields
+    if (!shippingAddress.phone || !shippingAddress.street || !shippingAddress.city || !shippingAddress.state) {
+      setOrderError('Please provide complete delivery address (phone, street address, city, and state)');
       return;
     }
 
@@ -283,9 +288,11 @@ export default function StoreCartPage({ params }) {
             firstName: customer.firstName,
             lastName: customer.lastName,
             phone: shippingAddress.phone,
+            street: shippingAddress.street,
             city: shippingAddress.city,
             state: shippingAddress.state,
-            country: 'Nigeria'
+            country: 'Nigeria',
+            landmark: shippingAddress.landmark || '' // Optional landmark
           },
           customerNotes: ""
         }),
@@ -593,8 +600,8 @@ export default function StoreCartPage({ params }) {
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              {/* ...existing form content with store colors... */}
               <div className="space-y-4">
+                {/* Customer Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Customer Name
@@ -608,7 +615,7 @@ export default function StoreCartPage({ params }) {
                   />
                 </div>
 
-                {/* WhatsApp validation */}
+                {/* WhatsApp Phone Number */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     WhatsApp Phone Number *
@@ -619,7 +626,7 @@ export default function StoreCartPage({ params }) {
                       name="phone"
                       value={shippingAddress.phone}
                       onChange={handleShippingAddressChange}
-                      placeholder="08012345678 or +2348012345678"
+                      placeholder="08012345678"
                       disabled={whatsAppValidated}
                       className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 text-gray-900 ${
                         whatsAppValidated ? 'bg-green-50 border-green-300' : 'border-gray-300 bg-white'
@@ -642,44 +649,89 @@ export default function StoreCartPage({ params }) {
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    We'll send your order updates via WhatsApp
+                    Ensure this is your WhatsApp number for order updates
                   </p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State *
-                  </label>
-                  <CustomDropdown
-                    options={stateOptions}
-                    value={shippingAddress.state}
-                    onChange={(value) => handleShippingAddressChange({ 
-                      target: { name: 'state', value } 
-                    })}
-                    placeholder="Select your state"
-                    backgroundColor="#FFFFFF"
-                    error={false}
-                  />
-                </div>
+                {/* Delivery Address Section */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Delivery Address</h4>
+                  
+                  {/* Street Address */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Street Address *
+                    </label>
+                    <textarea
+                      name="street"
+                      value={shippingAddress.street}
+                      onChange={handleShippingAddressChange}
+                      placeholder="e.g., No. 15, Allen Avenue, Ikeja"
+                      rows="2"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 bg-white text-gray-900 resize-none"
+                      style={{ '--tw-ring-color': primaryColor }}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Include house number and street name
+                    </p>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    City *
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={shippingAddress.city}
-                    onChange={handleShippingAddressChange}
-                    placeholder="Enter your city"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 bg-white text-gray-900"
-                    style={{ '--tw-ring-color': primaryColor }}
-                  />
+                  {/* City */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      City/Town *
+                    </label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={shippingAddress.city}
+                      onChange={handleShippingAddressChange}
+                      placeholder="e.g., Ikeja, Lekki, Surulere"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 bg-white text-gray-900"
+                      style={{ '--tw-ring-color': primaryColor }}
+                    />
+                  </div>
+
+                  {/* State */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      State *
+                    </label>
+                    <CustomDropdown
+                      options={stateOptions}
+                      value={shippingAddress.state}
+                      onChange={(value) => handleShippingAddressChange({ 
+                        target: { name: 'state', value } 
+                      })}
+                      placeholder="Select your state"
+                      backgroundColor="#FFFFFF"
+                      error={false}
+                    />
+                  </div>
+
+                  {/* Landmark (Optional) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Landmark (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      name="landmark"
+                      value={shippingAddress.landmark}
+                      onChange={handleShippingAddressChange}
+                      placeholder="e.g., Near GTBank, Opposite Shoprite"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 bg-white text-gray-900"
+                      style={{ '--tw-ring-color': primaryColor }}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      This helps the delivery person find you easily
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* Order Summary */}
-              <div className="bg-gray-50 rounded-xl p-4 mb-6 mt-6">
+              <div className="bg-gray-50 rounded-xl p-4 my-6">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Total Items:</span>
@@ -720,7 +772,7 @@ export default function StoreCartPage({ params }) {
                 </button>
                 <button
                   onClick={handleConfirmOrder}
-                  disabled={isPlacingOrder || !whatsAppValidated || !shippingAddress.city || !shippingAddress.state}
+                  disabled={isPlacingOrder || !whatsAppValidated || !shippingAddress.street || !shippingAddress.city || !shippingAddress.state}
                   className="flex-1 py-3 text-white rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   style={{ backgroundColor: primaryColor }}
                 >
@@ -733,12 +785,15 @@ export default function StoreCartPage({ params }) {
                       Placing Order...
                     </>
                   ) : (
-                    <>
-                      Confirm Order
-                    </>
+                    'Confirm Order'
                   )}
                 </button>
               </div>
+              
+              {/* Additional Info */}
+              <p className="text-xs text-gray-500 text-center mt-4">
+                You will receive order confirmations on WhatsApp from each store
+              </p>
             </div>
           </div>
         </div>

@@ -59,10 +59,14 @@ export async function POST(request) {
       );
     }
 
-    // Validate shipping address
-    if (!shippingAddress || !shippingAddress.phone || !shippingAddress.city || !shippingAddress.state) {
+    // Validate shipping address - Updated validation
+    if (!shippingAddress || 
+        !shippingAddress.phone || 
+        !shippingAddress.street ||
+        !shippingAddress.city || 
+        !shippingAddress.state) {
       return NextResponse.json(
-        { success: false, message: "Complete shipping address is required" },
+        { success: false, message: "Complete shipping address (phone, street, city, and state) is required" },
         { status: 400 }
       );
     }
@@ -77,15 +81,17 @@ export async function POST(request) {
       );
     }
 
-    // Prepare shipping address with customer details
+    // Prepare shipping address with all details
     const orderShippingAddress = {
       firstName: customer.firstName,
       lastName: customer.lastName,
       phone: formattedPhone,
-      street: `${shippingAddress.city}, ${shippingAddress.state}`, // Combine for compatibility
-      city: shippingAddress.city,
-      state: shippingAddress.state,
-      country: 'Nigeria'
+      street: shippingAddress.street.trim(),
+      city: shippingAddress.city.trim(),
+      state: shippingAddress.state.trim(),
+      country: shippingAddress.country || 'Nigeria',
+      postalCode: shippingAddress.postalCode || '',
+      landmark: shippingAddress.landmark?.trim() || ''
     };
 
     // Prepare order items with enhanced snapshots
@@ -275,7 +281,8 @@ export async function POST(request) {
         totalAmount: order.totalAmount,
         itemCount: order.itemCount,
         status: order.status,
-        stores: order.stores
+        stores: order.stores,
+        shippingAddress: order.shippingAddress // Include in response
       }
     });
 

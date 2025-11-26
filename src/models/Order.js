@@ -162,16 +162,54 @@ const OrderSchema = new mongoose.Schema({
     index: true
   },
   
-  // Shipping information
+  // Shipping information - Updated with detailed address
   shippingAddress: {
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    phone: { type: String, required: true },
-    street: { type: String }, // Optional, will contain "City, State" if not provided
-    city: { type: String, required: true },
-    state: { type: String, required: true },
-    country: { type: String, required: true, default: 'Nigeria' },
-    postalCode: String
+    firstName: { 
+      type: String, 
+      required: true,
+      trim: true
+    },
+    lastName: { 
+      type: String, 
+      required: true,
+      trim: true
+    },
+    phone: { 
+      type: String, 
+      required: true,
+      trim: true
+    },
+    street: { 
+      type: String, 
+      required: true,  // Now required for detailed address
+      trim: true,
+      maxlength: [200, 'Street address cannot exceed 200 characters']
+    },
+    city: { 
+      type: String, 
+      required: true,
+      trim: true
+    },
+    state: { 
+      type: String, 
+      required: true,
+      trim: true
+    },
+    country: { 
+      type: String, 
+      required: true, 
+      default: 'Nigeria',
+      trim: true
+    },
+    postalCode: {
+      type: String,
+      trim: true
+    },
+    landmark: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Landmark cannot exceed 200 characters']
+    }
   },
   
   // Billing address (if different from shipping)
@@ -348,6 +386,19 @@ OrderSchema.virtual('canBeCancelled').get(function() {
 
 OrderSchema.virtual('canBeRefunded').get(function() {
   return this.isPaid && ['delivered', 'cancelled'].includes(this.status);
+});
+
+// Add virtual for full address
+OrderSchema.virtual('fullAddress').get(function() {
+  const parts = [
+    this.shippingAddress.street,
+    this.shippingAddress.landmark,
+    this.shippingAddress.city,
+    this.shippingAddress.state,
+    this.shippingAddress.country
+  ].filter(Boolean);
+  
+  return parts.join(', ');
 });
 
 // Generate order number before saving
