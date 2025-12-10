@@ -655,7 +655,7 @@ export default function StoreWebsite({ store }) {
                 </div>
                 
                 {store.storeDescription && (
-                  <p className="text-white/90 text-sm leading-relaxed drop-shadow-md line-clamp-2">
+                  <p className="text-white/90 text-sm leading-relaxed drop-shadow-md line-clamp-1">
                     {store.storeDescription}
                   </p>
                 )}
@@ -678,7 +678,7 @@ export default function StoreWebsite({ store }) {
         )}
 
         {/* Mobile Categories Section - Only show if more than 1 category */}
-        {isMobile && categoriesWithCounts.length > 1 && (
+        {isMobile  && (
           <div className="mb-6 -mx-6">
             <div className="px-6 flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold text-gray-900">Category</h3>

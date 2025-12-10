@@ -1,15 +1,22 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Minus, ShoppingCart, Heart, MapPin, Tag, Package, Share2, Check, X } from "lucide-react";
+import { 
+  ArrowLeft, Plus, Minus, ShoppingCart, Heart, MapPin, Tag, Package, Share2, Check, X,
+  Shirt, Footprints, Watch, Droplets, UtensilsCrossed, Coffee, Smartphone, 
+  BookOpen, Home, Dumbbell, Car, Sparkles
+} from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import SignInModal from "@/components/auth/SignInModal";
 import SignUpModal from "@/components/auth/SignUpModal";
 import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
 import Toast from "@/components/ui/Toast";
+import Image from "next/image";
+import Link from "next/link";
 
-export default function ProductDetailsClient({ store, product, slug }) {
+export default function ProductDetailsClient({ store, product: initialProduct, slug }) {
   const router = useRouter();
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
@@ -24,19 +31,21 @@ export default function ProductDetailsClient({ store, product, slug }) {
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [toast, setToast] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(initialProduct.image);
 
   const primaryColor = store?.branding?.primaryColor || '#0D9488';
   const secondaryColor = store?.branding?.secondaryColor || '#F3F4F6';
   const currency = store?.settings?.currency || 'NGN';
 
-  const maxQuantity = product.quantityInStock || 0;
+  const maxQuantity = initialProduct.quantityInStock || 0;
   const isOutOfStock = maxQuantity === 0;
-  const isLowStock = maxQuantity > 0 && maxQuantity <= product.reorderLevel;
+  const isLowStock = maxQuantity > 0 && maxQuantity <= initialProduct.reorderLevel;
+  const shouldShowStock = isLowStock || isOutOfStock; // Only show stock when low or out
 
   // Update favicon when component mounts - SIMPLIFIED APPROACH
   useEffect(() => {
     const updateFavicon = () => {
-      const faviconUrl = product.image || store?.branding?.logo;
+      const faviconUrl = initialProduct.image || store?.branding?.logo;
       if (!faviconUrl) return;
 
       try {
@@ -81,12 +90,12 @@ export default function ProductDetailsClient({ store, product, slug }) {
         console.error('Favicon cleanup error:', error);
       }
     };
-  }, [product.image, store?.branding?.logo]);
+  }, [initialProduct.image, store?.branding?.logo]);
 
   // Check wishlist status
   useEffect(() => {
     const checkWishlistStatus = async () => {
-      if (!isAuthenticated || !product?._id) return;
+      if (!isAuthenticated || !initialProduct?._id) return;
       
       setCheckingWishlist(true);
       try {
@@ -97,7 +106,7 @@ export default function ProductDetailsClient({ store, product, slug }) {
         
         if (response.ok && data.success && data.wishlist?.items) {
           const isInWishlist = data.wishlist.items.some(item => 
-            (item.product._id || item.product) === product._id
+            (item.product._id || item.product) === initialProduct._id
           );
           setLiked(isInWishlist);
         }
@@ -109,7 +118,7 @@ export default function ProductDetailsClient({ store, product, slug }) {
     };
 
     checkWishlistStatus();
-  }, [isAuthenticated, product?._id]);
+  }, [isAuthenticated, initialProduct?._id]);
 
   const formatPrice = (price) => {
     if (currency === 'NGN') {
@@ -135,7 +144,7 @@ export default function ProductDetailsClient({ store, product, slug }) {
 
     setIsAddingToCart(true);
     try {
-      const result = await addToCart(product._id, quantity);
+      const result = await addToCart(initialProduct._id, quantity);
       if (result.success) {
         // Show success toast instead of alert
         setToast({
@@ -162,14 +171,14 @@ export default function ProductDetailsClient({ store, product, slug }) {
   };
 
   const handleShare = async () => {
-    const productUrl = `${window.location.origin}/${slug}/product/${product._id}`;
+    const productUrl = `${window.location.origin}/${slug}/product/${initialProduct._id}`;
     
     try {
       // Check if Web Share API is available (works on most mobile browsers)
       if (navigator.share) {
         await navigator.share({
-          title: product.productName,
-          text: `Check out ${product.productName} at ${store?.storeName}`,
+          title: initialProduct.productName,
+          text: `Check out ${initialProduct.productName} at ${store?.storeName}`,
           url: productUrl,
         });
         return;
@@ -224,7 +233,7 @@ export default function ProductDetailsClient({ store, product, slug }) {
     setAddingToWishlist(true);
     try {
       if (liked) {
-        const response = await fetch(`/api/wishlist/${product._id}`, {
+        const response = await fetch(`/api/wishlist/${initialProduct._id}`, {
           method: 'DELETE',
           credentials: 'include'
         });
@@ -235,7 +244,7 @@ export default function ProductDetailsClient({ store, product, slug }) {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            productId: product._id,
+            productId: initialProduct._id,
             priority: 'medium',
             notifications: { priceDropAlert: true, backInStockAlert: true }
           })
@@ -249,7 +258,459 @@ export default function ProductDetailsClient({ store, product, slug }) {
     }
   };
 
-  const totalPrice = product.sellingPrice * quantity;
+  const totalPrice = initialProduct.sellingPrice * quantity;
+
+  // Helper function to render category-specific details
+  const renderCategoryDetails = () => {
+    // Debug logging
+    console.log('Product category:', initialProduct.category);
+    console.log('Category details:', initialProduct.categoryDetails);
+    console.log('Clothing details direct:', initialProduct.clothingDetails);
+    
+    const details = initialProduct.categoryDetails;
+    
+    // If categoryDetails doesn't exist, try to check direct properties as fallback
+    if (!details || Object.keys(details).every(key => !details[key])) {
+      console.log('No category details found in categoryDetails object');
+      
+      // Fallback: check direct properties
+      if (initialProduct.clothingDetails) {
+        const clothing = initialProduct.clothingDetails;
+        return (
+          <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Shirt className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+              Clothing Specifications
+            </h3>
+            <div className="space-y-4">
+              {clothing.gender && (
+                <DetailRow label="Gender" value={clothing.gender} />
+              )}
+              {clothing.productType && (
+                <DetailRow label="Product Type" value={clothing.productType} />
+              )}
+              {clothing.material && (
+                <DetailRow label="Material" value={clothing.material} />
+              )}
+              {clothing.sizes && Array.isArray(clothing.sizes) && clothing.sizes.length > 0 && (
+                <DetailRow label="Available Sizes" value={clothing.sizes.join(' • ')} />
+              )}
+              {clothing.colors && Array.isArray(clothing.colors) && clothing.colors.length > 0 && (
+                <DetailRow label="Available Colors" value={clothing.colors.join(' • ')} />
+              )}
+              {clothing.style && Array.isArray(clothing.style) && clothing.style.length > 0 && (
+                <DetailRow label="Style" value={clothing.style.join(' • ')} />
+              )}
+              {clothing.occasion && Array.isArray(clothing.occasion) && clothing.occasion.length > 0 && (
+                <DetailRow label="Suitable For" value={clothing.occasion.join(' • ')} />
+              )}
+            </div>
+          </div>
+        );
+      }
+      
+      // Shoes fallback
+      if (initialProduct.shoesDetails) {
+        const shoes = initialProduct.shoesDetails;
+        return (
+          <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Footprints className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+              Shoe Specifications
+            </h3>
+            <div className="space-y-4">
+              {shoes.gender && <DetailRow label="Gender" value={shoes.gender} />}
+              {shoes.shoeType && <DetailRow label="Shoe Type" value={shoes.shoeType} />}
+              {shoes.material && <DetailRow label="Material" value={shoes.material} />}
+              {shoes.sizes && Array.isArray(shoes.sizes) && shoes.sizes.length > 0 && (
+                <DetailRow label="Available Sizes" value={shoes.sizes.join(' • ')} />
+              )}
+              {shoes.colors && Array.isArray(shoes.colors) && shoes.colors.length > 0 && (
+                <DetailRow label="Available Colors" value={shoes.colors.join(' • ')} />
+              )}
+              {shoes.occasion && Array.isArray(shoes.occasion) && shoes.occasion.length > 0 && (
+                <DetailRow label="Suitable For" value={shoes.occasion.join(' • ')} />
+              )}
+            </div>
+          </div>
+        );
+      }
+      
+      return null;
+    }
+
+    // Clothing Details
+    if (details.clothing) {
+      const clothing = details.clothing;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Shirt className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Clothing Specifications
+          </h3>
+          <div className="space-y-4">
+            {clothing.gender && (
+              <DetailRow label="Gender" value={clothing.gender} />
+            )}
+            {clothing.productType && (
+              <DetailRow label="Product Type" value={clothing.productType} />
+            )}
+            {clothing.material && (
+              <DetailRow label="Material" value={clothing.material} />
+            )}
+            {clothing.sizes && Array.isArray(clothing.sizes) && clothing.sizes.length > 0 && (
+              <DetailRow label="Available Sizes" value={clothing.sizes.join(' • ')} />
+            )}
+            {clothing.colors && Array.isArray(clothing.colors) && clothing.colors.length > 0 && (
+              <DetailRow label="Available Colors" value={clothing.colors.join(' • ')} />
+            )}
+            {clothing.style && Array.isArray(clothing.style) && clothing.style.length > 0 && (
+              <DetailRow label="Style" value={clothing.style.join(' • ')} />
+            )}
+            {clothing.occasion && Array.isArray(clothing.occasion) && clothing.occasion.length > 0 && (
+              <DetailRow label="Suitable For" value={clothing.occasion.join(' • ')} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Shoes Details
+    if (details.shoes) {
+      const shoes = details.shoes;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Footprints className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Shoe Specifications
+          </h3>
+          <div className="space-y-4">
+            {shoes.gender && <DetailRow label="Gender" value={shoes.gender} />}
+            {shoes.shoeType && <DetailRow label="Shoe Type" value={shoes.shoeType} />}
+            {shoes.material && <DetailRow label="Material" value={shoes.material} />}
+            {shoes.sizes && Array.isArray(shoes.sizes) && shoes.sizes.length > 0 && (
+              <DetailRow label="Available Sizes" value={shoes.sizes.join(' • ')} />
+            )}
+            {shoes.colors && Array.isArray(shoes.colors) && shoes.colors.length > 0 && (
+              <DetailRow label="Available Colors" value={shoes.colors.join(' • ')} />
+            )}
+            {shoes.occasion && Array.isArray(shoes.occasion) && shoes.occasion.length > 0 && (
+              <DetailRow label="Suitable For" value={shoes.occasion.join(' • ')} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Accessories Details
+    if (details.accessories) {
+      const acc = details.accessories;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Watch className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Accessory Specifications
+          </h3>
+          <div className="space-y-4">
+            {acc.accessoryType && <DetailRow label="Type" value={acc.accessoryType} />}
+            {acc.gender && <DetailRow label="Gender" value={acc.gender} />}
+            {acc.material && <DetailRow label="Material" value={acc.material} />}
+            {acc.colors && Array.isArray(acc.colors) && acc.colors.length > 0 && (
+              <DetailRow label="Available Colors" value={acc.colors.join(' • ')} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Perfume Details
+    if (details.perfume) {
+      const perfume = details.perfume;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Droplets className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Perfume Specifications
+          </h3>
+          <div className="space-y-4">
+            {perfume.fragranceType && <DetailRow label="Fragrance Type" value={perfume.fragranceType} />}
+            {perfume.gender && <DetailRow label="Gender" value={perfume.gender} />}
+            {perfume.volume && <DetailRow label="Volume" value={perfume.volume} />}
+            {perfume.scentFamily && <DetailRow label="Scent Family" value={perfume.scentFamily} />}
+            {perfume.concentration && <DetailRow label="Concentration" value={perfume.concentration} />}
+            {perfume.occasion && Array.isArray(perfume.occasion) && perfume.occasion.length > 0 && (
+              <DetailRow label="Suitable For" value={perfume.occasion.join(' • ')} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Food Details
+    if (details.food) {
+      const food = details.food;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Food Information
+          </h3>
+          <div className="space-y-4">
+            {food.foodType && <DetailRow label="Food Type" value={food.foodType} />}
+            {food.servingSize && <DetailRow label="Serving Size" value={food.servingSize} />}
+            {food.spiceLevel && <DetailRow label="Spice Level" value={food.spiceLevel} />}
+            {food.cuisineType && Array.isArray(food.cuisineType) && food.cuisineType.length > 0 && (
+              <DetailRow label="Cuisine" value={food.cuisineType.join(' • ')} />
+            )}
+            {food.ingredients && Array.isArray(food.ingredients) && food.ingredients.length > 0 && (
+              <DetailRow label="Ingredients" value={food.ingredients.join(', ')} />
+            )}
+            {food.allergens && Array.isArray(food.allergens) && food.allergens.length > 0 && (
+              <DetailRow label="Allergens" value={food.allergens.join(', ')} badge="warning" />
+            )}
+            {food.deliveryTime && (
+              <DetailRow label="Delivery Time" value={`${food.deliveryTime.value} ${food.deliveryTime.unit}`} />
+            )}
+            {food.maxOrdersPerDay && (
+              <DetailRow label="Max Orders Per Day" value={food.maxOrdersPerDay} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Beverages Details
+    if (details.beverages) {
+      const bev = details.beverages;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Coffee className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Beverage Specifications
+          </h3>
+          <div className="space-y-4">
+            {bev.beverageType && <DetailRow label="Beverage Type" value={bev.beverageType} />}
+            {bev.volume && <DetailRow label="Volume" value={bev.volume} />}
+            {bev.packaging && <DetailRow label="Packaging" value={bev.packaging} />}
+            {bev.isAlcoholic !== undefined && (
+              <DetailRow label="Alcoholic" value={bev.isAlcoholic ? 'Yes' : 'No'} badge={bev.isAlcoholic ? 'warning' : 'success'} />
+            )}
+            {bev.alcoholContent && <DetailRow label="Alcohol Content" value={bev.alcoholContent} />}
+            {bev.isCarbonated !== undefined && (
+              <DetailRow label="Carbonated" value={bev.isCarbonated ? 'Yes' : 'No'} />
+            )}
+            {bev.flavorProfile && Array.isArray(bev.flavorProfile) && bev.flavorProfile.length > 0 && (
+              <DetailRow label="Flavor Profile" value={bev.flavorProfile.join(' • ')} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Electronics Details
+    if (details.electronics) {
+      const elec = details.electronics;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Smartphone className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Electronics Specifications
+          </h3>
+          <div className="space-y-4">
+            {elec.productType && <DetailRow label="Product Type" value={elec.productType} />}
+            {elec.brand && <DetailRow label="Brand" value={elec.brand} />}
+            {elec.model && <DetailRow label="Model" value={elec.model} />}
+            {elec.condition && <DetailRow label="Condition" value={elec.condition} />}
+            {elec.specifications?.processor && <DetailRow label="Processor" value={elec.specifications.processor} />}
+            {elec.specifications?.ram && <DetailRow label="RAM" value={elec.specifications.ram} />}
+            {elec.specifications?.storage && <DetailRow label="Storage" value={elec.specifications.storage} />}
+            {elec.specifications?.screenSize && <DetailRow label="Screen Size" value={elec.specifications.screenSize} />}
+            {elec.specifications?.batteryCapacity && <DetailRow label="Battery" value={elec.specifications.batteryCapacity} />}
+            {elec.specifications?.camera && <DetailRow label="Camera" value={elec.specifications.camera} />}
+            {elec.colors && Array.isArray(elec.colors) && elec.colors.length > 0 && (
+              <DetailRow label="Available Colors" value={elec.colors.join(' • ')} />
+            )}
+            {elec.warranty && elec.warranty.hasWarranty && (
+              <DetailRow label="Warranty" value={`${elec.warranty.duration} - ${elec.warranty.type || 'Standard'}`} badge="success" />
+            )}
+            {elec.connectivity && Array.isArray(elec.connectivity) && elec.connectivity.length > 0 && (
+              <DetailRow label="Connectivity" value={elec.connectivity.join(' • ')} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Books Details
+    if (details.books) {
+      const book = details.books;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Book Information
+          </h3>
+          <div className="space-y-4">
+            {book.bookType && <DetailRow label="Book Type" value={book.bookType} />}
+            {book.author && <DetailRow label="Author" value={book.author} />}
+            {book.publisher && <DetailRow label="Publisher" value={book.publisher} />}
+            {book.isbn && <DetailRow label="ISBN" value={book.isbn} />}
+            {book.publicationYear && <DetailRow label="Publication Year" value={book.publicationYear} />}
+            {book.language && <DetailRow label="Language" value={book.language} />}
+            {book.pages && <DetailRow label="Pages" value={book.pages} />}
+            {book.format && <DetailRow label="Format" value={book.format} />}
+            {book.condition && <DetailRow label="Condition" value={book.condition} />}
+            {book.genre && Array.isArray(book.genre) && book.genre.length > 0 && (
+              <DetailRow label="Genre" value={book.genre.join(' • ')} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Home & Garden Details
+    if (details.homeGarden) {
+      const home = details.homeGarden;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Home className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Home & Garden Specifications
+          </h3>
+          <div className="space-y-4">
+            {home.productType && <DetailRow label="Product Type" value={home.productType} />}
+            {home.material && <DetailRow label="Material" value={home.material} />}
+            {home.room && Array.isArray(home.room) && home.room.length > 0 && (
+              <DetailRow label="Suitable Room" value={home.room.join(' • ')} />
+            )}
+            {home.color && Array.isArray(home.color) && home.color.length > 0 && (
+              <DetailRow label="Available Colors" value={home.color.join(' • ')} />
+            )}
+            {home.dimensions?.length && <DetailRow label="Length" value={home.dimensions.length} />}
+            {home.dimensions?.width && <DetailRow label="Width" value={home.dimensions.width} />}
+            {home.dimensions?.height && <DetailRow label="Height" value={home.dimensions.height} />}
+            {home.dimensions?.weight && <DetailRow label="Weight" value={home.dimensions.weight} />}
+            {home.assemblyRequired !== undefined && (
+              <DetailRow label="Assembly Required" value={home.assemblyRequired ? 'Yes' : 'No'} badge={home.assemblyRequired ? 'warning' : 'success'} />
+            )}
+            {home.careInstructions && (
+              <DetailRow label="Care Instructions" value={home.careInstructions} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Sports Details
+    if (details.sports) {
+      const sport = details.sports;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Dumbbell className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Sports Specifications
+          </h3>
+          <div className="space-y-4">
+            {sport.sportType && <DetailRow label="Sport Type" value={sport.sportType} />}
+            {sport.productType && <DetailRow label="Product Type" value={sport.productType} />}
+            {sport.brand && <DetailRow label="Brand" value={sport.brand} />}
+            {sport.material && <DetailRow label="Material" value={sport.material} />}
+            {sport.performanceLevel && <DetailRow label="Performance Level" value={sport.performanceLevel} />}
+            {sport.sizes && Array.isArray(sport.sizes) && sport.sizes.length > 0 && (
+              <DetailRow label="Available Sizes" value={sport.sizes.join(' • ')} />
+            )}
+            {sport.colors && Array.isArray(sport.colors) && sport.colors.length > 0 && (
+              <DetailRow label="Available Colors" value={sport.colors.join(' • ')} />
+            )}
+            {sport.suitableFor && Array.isArray(sport.suitableFor) && sport.suitableFor.length > 0 && (
+              <DetailRow label="Suitable For" value={sport.suitableFor.join(' • ')} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Automotive Details
+    if (details.automotive) {
+      const auto = details.automotive;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Car className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Automotive Specifications
+          </h3>
+          <div className="space-y-4">
+            {auto.productType && <DetailRow label="Product Type" value={auto.productType} />}
+            {auto.brand && <DetailRow label="Brand" value={auto.brand} />}
+            {auto.partNumber && <DetailRow label="Part Number" value={auto.partNumber} />}
+            {auto.condition && <DetailRow label="Condition" value={auto.condition} />}
+            {auto.warranty && auto.warranty.hasWarranty && (
+              <DetailRow label="Warranty" value={auto.warranty.duration} badge="success" />
+            )}
+            {auto.compatibleVehicles && Array.isArray(auto.compatibleVehicles) && auto.compatibleVehicles.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium text-gray-500">Compatible Vehicles:</p>
+                <div className="flex flex-wrap gap-2">
+                  {auto.compatibleVehicles.map((vehicle, idx) => (
+                    <span key={idx} className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                      {vehicle.make} {vehicle.model} ({vehicle.year})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {auto.specifications && (
+              <DetailRow label="Specifications" value={auto.specifications} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Health & Beauty Details
+    if (details.healthBeauty) {
+      const health = details.healthBeauty;
+      return (
+        <div className="mb-6 sm:mb-8 pb-6 sm:pb-8 border-b border-gray-100">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: primaryColor }} />
+            Health & Beauty Specifications
+          </h3>
+          <div className="space-y-4">
+            {health.productType && <DetailRow label="Product Type" value={health.productType} />}
+            {health.brand && <DetailRow label="Brand" value={health.brand} />}
+            {health.volume && <DetailRow label="Volume" value={health.volume} />}
+            {health.scent && <DetailRow label="Scent" value={health.scent} />}
+            {health.isOrganic && <DetailRow label="Organic" value="Yes" badge="success" />}
+            {health.expiryDate && (
+              <DetailRow label="Expiry Date" value={new Date(health.expiryDate).toLocaleDateString()} />
+            )}
+            {health.skinType && Array.isArray(health.skinType) && health.skinType.length > 0 && (
+              <DetailRow label="Skin Type" value={health.skinType.join(' • ')} />
+            )}
+            {health.suitableFor && Array.isArray(health.suitableFor) && health.suitableFor.length > 0 && (
+              <DetailRow label="Suitable For" value={health.suitableFor.join(' • ')} />
+            )}
+            {health.applicationArea && Array.isArray(health.applicationArea) && health.applicationArea.length > 0 && (
+              <DetailRow label="Application Area" value={health.applicationArea.join(' • ')} />
+            )}
+            {health.benefits && Array.isArray(health.benefits) && health.benefits.length > 0 && (
+              <DetailRow label="Benefits" value={health.benefits.join(', ')} />
+            )}
+            {health.ingredients && Array.isArray(health.ingredients) && health.ingredients.length > 0 && (
+              <DetailRow label="Ingredients" value={health.ingredients.join(', ')} />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const handleImageError = () => {
+    setSelectedImage('/placeholder-product.jpg');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -287,11 +748,14 @@ export default function ProductDetailsClient({ store, product, slug }) {
                 className="relative w-full aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-lg mb-4 sm:mb-6"
                 style={{ backgroundColor: secondaryColor }}
               >
-                {product.image ? (
-                  <img 
-                    src={product.image} 
-                    alt={product.productName}
+                {selectedImage ? (
+                  <Image 
+                    src={selectedImage} 
+                    alt={initialProduct.productName}
+                    width={600}
+                    height={600}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                    onError={handleImageError}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -347,20 +811,22 @@ export default function ProductDetailsClient({ store, product, slug }) {
               </div>
 
               <div className="flex gap-3 sm:grid sm:grid-cols-3 sm:gap-4 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0">
-                <div className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center hover:shadow-md transition-shadow flex-shrink-0 min-w-[100px] sm:min-w-0">
-                  <Package className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 mx-auto mb-1 sm:mb-2" />
-                  <p className="text-xs text-gray-500 mb-1">In Stock</p>
-                  <p className="text-sm sm:text-lg font-bold text-gray-900">{maxQuantity}</p>
-                </div>
+                {shouldShowStock && (
+                  <div className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center hover:shadow-md transition-shadow flex-shrink-0 min-w-[100px] sm:min-w-0">
+                    <Package className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 mx-auto mb-1 sm:mb-2" />
+                    <p className="text-xs text-gray-500 mb-1">In Stock</p>
+                    <p className="text-sm sm:text-lg font-bold text-gray-900">{maxQuantity}</p>
+                  </div>
+                )}
                 <div className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center hover:shadow-md transition-shadow flex-shrink-0 min-w-[100px] sm:min-w-0">
                   <Tag className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 mx-auto mb-1 sm:mb-2" />
                   <p className="text-xs text-gray-500 mb-1">Category</p>
-                  <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{product.category}</p>
+                  <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{initialProduct.category}</p>
                 </div>
                 <div className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center hover:shadow-md transition-shadow flex-shrink-0 min-w-[100px] sm:min-w-0">
                   <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 mx-auto mb-1 sm:mb-2" />
                   <p className="text-xs text-gray-500 mb-1">Location</p>
-                  <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{product.location || 'Store'}</p>
+                  <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{initialProduct.location || 'Store'}</p>
                 </div>
               </div>
             </div>
@@ -370,19 +836,19 @@ export default function ProductDetailsClient({ store, product, slug }) {
               <div className="mb-6 sm:mb-8">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-full text-xs font-medium text-gray-700 mb-3 sm:mb-4">
                   <Tag className="w-3 h-3" />
-                  {product.category}
+                  {initialProduct.category}
                 </div>
                 
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-3 leading-tight">
-                  {product.productName}
+                  {initialProduct.productName}
                 </h1>
                 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
-                  <span>SKU: <span className="font-mono font-medium text-gray-700">{product.sku || 'N/A'}</span></span>
-                  {product.brand && (
+                  <span>SKU: <span className="font-mono font-medium text-gray-700">{initialProduct.sku || 'N/A'}</span></span>
+                  {initialProduct.brand && (
                     <>
                       <span className="hidden sm:inline">•</span>
-                      <span>Brand: <span className="font-medium text-gray-700">{product.brand}</span></span>
+                      <span>Brand: <span className="font-medium text-gray-700">{initialProduct.brand}</span></span>
                     </>
                   )}
                 </div>
@@ -392,19 +858,22 @@ export default function ProductDetailsClient({ store, product, slug }) {
                 <p className="text-sm text-gray-500 mb-2">Price</p>
                 <div className="flex items-baseline gap-3">
                   <p className="text-3xl sm:text-4xl lg:text-5xl font-bold" style={{ color: primaryColor }}>
-                    {formatPrice(product.sellingPrice)}
+                    {formatPrice(initialProduct.sellingPrice)}
                   </p>
                 </div>
               </div>
 
-              {product.description && (
+              {initialProduct.description && (
                 <div className="mb-6 sm:mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Product Description</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
                   <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                    {product.description}
+                    {initialProduct.description}
                   </p>
                 </div>
               )}
+
+              {/* Category-Specific Details */}
+              {renderCategoryDetails()}
 
               <div className="mb-6 sm:mb-8">
                 <label className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 block">
@@ -436,9 +905,16 @@ export default function ProductDetailsClient({ store, product, slug }) {
                       <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
                     </button>
                   </div>
-                  <p className="text-sm text-gray-600">
-                    <span className="font-semibold text-gray-900">{maxQuantity}</span> items available
-                  </p>
+                  {shouldShowStock && (
+                    <p className="text-sm text-gray-600">
+                      <span className="font-semibold text-gray-900">{maxQuantity}</span> items available
+                    </p>
+                  )}
+                  {!shouldShowStock && (
+                    <p className="text-sm text-green-600 font-medium">
+                      In Stock
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -450,7 +926,7 @@ export default function ProductDetailsClient({ store, product, slug }) {
                   </span>
                 </div>
                 <p className="text-sm text-gray-500">
-                  {quantity} {quantity === 1 ? 'item' : 'items'} × {formatPrice(product.sellingPrice)}
+                  {quantity} {quantity === 1 ? 'item' : 'items'} × {formatPrice(initialProduct.sellingPrice)}
                 </p>
               </div>
 
@@ -490,27 +966,27 @@ export default function ProductDetailsClient({ store, product, slug }) {
           </div>
         </div>
 
-        {(product.supplier || product.notes) && (
+        {(initialProduct.supplier || initialProduct.notes) && (
           <div className="mt-6 sm:mt-8 bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 p-4 sm:p-8">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Additional Information</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              {product.supplier && (
+              {initialProduct.supplier && (
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Supplier</p>
-                  <p className="text-gray-900 font-medium">{product.supplier}</p>
+                  <p className="text-gray-900 font-medium">{initialProduct.supplier}</p>
                 </div>
               )}
-              {product.unitOfMeasure && (
+              {initialProduct.unitOfMeasure && (
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Unit of Measure</p>
-                  <p className="text-gray-900 font-medium">{product.unitOfMeasure}</p>
+                  <p className="text-gray-900 font-medium">{initialProduct.unitOfMeasure}</p>
                 </div>
               )}
             </div>
-            {product.notes && (
+            {initialProduct.notes && (
               <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-100">
                 <p className="text-sm text-gray-500 mb-2">Notes</p>
-                <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{product.notes}</p>
+                <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{initialProduct.notes}</p>
               </div>
             )}
           </div>
@@ -621,6 +1097,58 @@ export default function ProductDetailsClient({ store, product, slug }) {
           animation: fade-in 0.3s ease-out;
         }
       `}</style>
+    </div>
+  );
+}
+
+// Helper component for detail rows with better typography
+function DetailRow({ label, value, badge }) {
+  if (!value) return null;
+  
+  const badgeColors = {
+    success: 'bg-green-50 text-green-700 border border-green-200',
+    warning: 'bg-amber-50 text-amber-700 border border-amber-200',
+    info: 'bg-blue-50 text-blue-700 border border-blue-200'
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 py-2">
+      <dt className="text-sm font-medium text-gray-500 sm:w-1/3 flex-shrink-0">
+        {label}
+      </dt>
+      <dd className="text-sm sm:text-base text-gray-900 font-medium sm:w-2/3">
+        {badge ? (
+          <span className={`inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium ${badgeColors[badge] || badgeColors.info}`}>
+            {value}
+          </span>
+        ) : (
+          <span className="leading-relaxed">{value}</span>
+        )}
+      </dd>
+    </div>
+  );
+}
+
+// Keep the old DetailItem for backward compatibility if needed
+function DetailItem({ label, value, badge }) {
+  if (!value) return null;
+  
+  const badgeColors = {
+    success: 'bg-green-50 text-green-700 border border-green-200',
+    warning: 'bg-amber-50 text-amber-700 border border-amber-200',
+    info: 'bg-blue-50 text-blue-700 border border-blue-200'
+  };
+
+  return (
+    <div>
+      <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">{label}</p>
+      {badge ? (
+        <span className={`inline-block px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium ${badgeColors[badge] || badgeColors.info}`}>
+          {value}
+        </span>
+      ) : (
+        <p className="text-sm sm:text-base text-gray-900 font-medium">{value}</p>
+      )}
     </div>
   );
 }

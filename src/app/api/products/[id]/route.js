@@ -102,6 +102,22 @@ export async function GET(request, { params }) {
       // Override quantity with total available from all batches
       quantityInStock: totalAvailableQuantity,
       
+      // Include ALL category-specific details
+      categoryDetails: {
+        clothing: product.clothingDetails,
+        shoes: product.shoesDetails,
+        accessories: product.accessoriesDetails,
+        perfume: product.perfumeDetails,
+        food: product.foodDetails,
+        beverages: product.beveragesDetails,
+        electronics: product.electronicsDetails,
+        books: product.booksDetails,
+        homeGarden: product.homeGardenDetails,
+        sports: product.sportsDetails,
+        automotive: product.automotiveDetails,
+        healthBeauty: product.healthBeautyDetails
+      },
+      
       // Batch information - only include batches with actual stock
       batches: activeBatches.map(batch => ({
         _id: batch._id,

@@ -103,9 +103,28 @@ export default async function ProductPage({ params }) {
     notFound();
   }
 
+  // Manually structure categoryDetails to ensure they're passed correctly
+  const productWithCategoryDetails = {
+    ...product,
+    categoryDetails: {
+      clothing: product.clothingDetails,
+      shoes: product.shoesDetails,
+      accessories: product.accessoriesDetails,
+      perfume: product.perfumeDetails,
+      food: product.foodDetails,
+      beverages: product.beveragesDetails,
+      electronics: product.electronicsDetails,
+      books: product.booksDetails,
+      homeGarden: product.homeGardenDetails,
+      sports: product.sportsDetails,
+      automotive: product.automotiveDetails,
+      healthBeauty: product.healthBeautyDetails
+    }
+  };
+
   // Convert to plain objects
   const storeData = JSON.parse(JSON.stringify(store));
-  const productData = JSON.parse(JSON.stringify(product));
+  const productData = JSON.parse(JSON.stringify(productWithCategoryDetails));
 
   return <ProductDetailsClient store={storeData} product={productData} slug={slug} />;
 }
