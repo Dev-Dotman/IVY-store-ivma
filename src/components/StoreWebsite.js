@@ -1017,13 +1017,13 @@ export default function StoreWebsite({ store }) {
           </div>
 
           {loading ? (
-            <div className="text-center py-20" ref={loadingRef}>
-              <div
-                className="loading-spinner inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200"
-                style={{ borderTopColor: primaryColor }}
-              ></div>
-              <p className="loading-text mt-4 text-sm text-gray-600">Loading products...</p>
-            </div>
+            <div className="text-center py-20">
+                        <div 
+                          className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-4 mb-4"
+                          style={{ borderTopColor: primaryColor }}
+                        ></div>
+                        <p className="text-gray-600">Loading products...</p>
+                      </div>
           ) : error ? (
             <div className="text-center py-20">
               <div className="text-8xl mb-4">⚠️</div>
