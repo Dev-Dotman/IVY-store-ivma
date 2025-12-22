@@ -832,7 +832,7 @@ export default function StoreWebsite({ store }) {
         )}
 
         {/* Mobile Categories Section - Only show if more than 1 category */}
-        {isMobile  && (
+        {isMobile  && categoriesWithCounts.length > 1 && (
           <div className="mb-6 -mx-6">
             <div className="px-6 flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold text-gray-900">Category</h3>
