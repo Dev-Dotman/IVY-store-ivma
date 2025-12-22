@@ -12,7 +12,24 @@ const cartItemSchema = new mongoose.Schema({
     sku: String,
     category: String,
     image: String,
-    unitOfMeasure: String
+    images: [{
+      url: String,
+      colorTag: String,
+      isPrimary: Boolean
+    }],
+    unitOfMeasure: String,
+    brand: String,
+    hasVariants: { type: Boolean, default: false }
+  },
+  // Variant information (if product has variants)
+  variant: {
+    variantId: {
+      type: mongoose.Schema.Types.ObjectId
+    },
+    color: String,
+    size: String,
+    sku: String,
+    image: String
   },
   quantity: {
     type: Number,
@@ -37,7 +54,13 @@ const cartItemSchema = new mongoose.Schema({
   },
   storeSnapshot: {
     storeName: String,
-    storeSlug: String
+    storeSlug: String,
+    websitePath: String
+  },
+  // Batch information (if applicable)
+  batch: {
+    batchId: mongoose.Schema.Types.ObjectId,
+    batchCode: String
   },
   addedAt: {
     type: Date,
@@ -357,33 +380,130 @@ cartSchema.methods.recalculateSubtotal = function() {
   return this.subtotal;
 };
 
-cartSchema.methods.addItem = async function(productData, quantity = 1) {
-  const { product, price, store, productSnapshot, storeSnapshot, notes } = productData;
+cartSchema.methods.addItem = async function(productData, quantity = 1, variantData = null) {
+  const Inventory = mongoose.model('Inventory');
+  const Store = mongoose.model('Store');
+  
+  const { productId, price, notes } = productData;
+  
+  // Fetch product details
+  const product = await Inventory.findById(productId).lean();
+  
+  if (!product) {
+    throw new Error('Product not found');
+  }
+  
+  if (!product.webVisibility || product.status !== 'Active') {
+    throw new Error('Product is not available for purchase');
+  }
+  
+  // Fetch store details
+  const store = await Store.findOne({ userId: product.userId }).lean();
+  
+  if (!store) {
+    throw new Error('Store not found');
+  }
+  
+  // Validate variant if product has variants
+  let variantInfo = null;
+  let availableStock = product.quantityInStock;
+  let itemPrice = price || product.sellingPrice;
+  
+  if (product.hasVariants && variantData) {
+    const { variantId, color, size } = variantData;
+    
+    // Find the specific variant
+    const variant = product.variants?.find(v => 
+      v._id.toString() === variantId.toString() && 
+      v.isActive
+    );
+    
+    if (!variant) {
+      throw new Error(`Variant not found: ${color} - ${size}`);
+    }
+    
+    if (variant.quantityInStock < quantity) {
+      throw new Error(`Insufficient stock for ${color} - ${size}. Available: ${variant.quantityInStock}`);
+    }
+    
+    availableStock = variant.quantityInStock;
+    variantInfo = {
+      variantId: variant._id,
+      color: variant.color,
+      size: variant.size,
+      sku: variant.sku,
+      image: variant.images && variant.images.length > 0 
+        ? variant.images[0] 
+        : product.images?.find(img => img.colorTag === color)?.url || product.image
+    };
+  } else if (product.hasVariants && !variantData) {
+    throw new Error('This product requires variant selection (color and size)');
+  } else {
+    // Simple product without variants
+    if (availableStock < quantity) {
+      throw new Error(`Insufficient stock. Available: ${availableStock}`);
+    }
+  }
+  
+  // Create unique identifier for cart item (includes variant if applicable)
+  const itemIdentifier = variantInfo 
+    ? `${productId.toString()}-${variantInfo.variantId.toString()}`
+    : productId.toString();
   
   // Check if item already exists in cart
-  const existingItemIndex = this.items.findIndex(
-    item => item.product.toString() === product.toString()
-  );
+  const existingItemIndex = this.items.findIndex(item => {
+    const existingIdentifier = item.variant?.variantId
+      ? `${item.product.toString()}-${item.variant.variantId.toString()}`
+      : item.product.toString();
+    return existingIdentifier === itemIdentifier;
+  });
   
   if (existingItemIndex > -1) {
     // Update existing item quantity
-    this.items[existingItemIndex].quantity += quantity;
-    this.items[existingItemIndex].subtotal = this.items[existingItemIndex].quantity * this.items[existingItemIndex].price;
+    const newQuantity = this.items[existingItemIndex].quantity + quantity;
+    
+    // Validate stock for new quantity
+    if (newQuantity > availableStock) {
+      throw new Error(`Cannot add ${quantity} more. Maximum available: ${availableStock - this.items[existingItemIndex].quantity}`);
+    }
+    
+    this.items[existingItemIndex].quantity = newQuantity;
+    this.items[existingItemIndex].subtotal = newQuantity * this.items[existingItemIndex].price;
     this.items[existingItemIndex].addedAt = new Date();
     
     if (notes) {
       this.items[existingItemIndex].notes = notes;
     }
   } else {
+    // Prepare product snapshot
+    const productSnapshot = {
+      productName: product.productName,
+      sku: product.sku,
+      category: product.category,
+      image: product.image,
+      images: product.images || [],
+      unitOfMeasure: product.unitOfMeasure,
+      brand: product.brand,
+      hasVariants: product.hasVariants || false
+    };
+    
+    // Prepare store snapshot
+    const storeSnapshot = {
+      storeName: store.storeName,
+      storeSlug: store.ivmaWebsite?.websitePath || store.slug,
+      websitePath: store.ivmaWebsite?.websitePath
+    };
+    
     // Add new item
     this.items.push({
-      product,
-      productSnapshot: productSnapshot || {},
+      product: productId,
+      productSnapshot,
+      variant: variantInfo || undefined,
       quantity,
-      price,
-      subtotal: quantity * price,
-      store,
-      storeSnapshot: storeSnapshot || {},
+      price: itemPrice,
+      subtotal: quantity * itemPrice,
+      store: store._id,
+      storeSnapshot,
       notes: notes || '',
       addedAt: new Date()
     });
@@ -392,25 +512,64 @@ cartSchema.methods.addItem = async function(productData, quantity = 1) {
   return await this.save();
 };
 
-cartSchema.methods.removeItem = function(productId) {
-  this.items = this.items.filter(item => 
-    (item.product._id || item.product).toString() !== productId.toString()
-  );
+cartSchema.methods.removeItem = function(productId, variantId = null) {
+  this.items = this.items.filter(item => {
+    const productMatch = (item.product._id || item.product).toString() !== productId.toString();
+    
+    if (variantId && !productMatch) {
+      // If variant specified, also check variant match
+      return item.variant?.variantId?.toString() !== variantId.toString();
+    }
+    
+    return productMatch;
+  });
   
   this.recalculateSubtotal();
   return this;
 };
 
-cartSchema.methods.updateItemQuantity = async function(productId, newQuantity) {
+cartSchema.methods.updateItemQuantity = async function(productId, newQuantity, variantId = null) {
   if (newQuantity < 1) {
-    return await this.removeItem(productId);
+    this.removeItem(productId, variantId);
+    return await this.save();
   }
   
-  const item = this.items.find(
-    item => item.product.toString() === productId.toString()
-  );
+  const Inventory = mongoose.model('Inventory');
+  
+  const item = this.items.find(item => {
+    const productMatch = item.product.toString() === productId.toString();
+    if (variantId) {
+      return productMatch && item.variant?.variantId?.toString() === variantId.toString();
+    }
+    return productMatch;
+  });
   
   if (item) {
+    // Validate stock availability
+    const product = await Inventory.findById(productId).lean();
+    
+    if (!product) {
+      throw new Error('Product not found');
+    }
+    
+    let availableStock = product.quantityInStock;
+    
+    if (item.variant?.variantId) {
+      const variant = product.variants?.find(v => 
+        v._id.toString() === item.variant.variantId.toString()
+      );
+      
+      if (!variant) {
+        throw new Error('Variant not found');
+      }
+      
+      availableStock = variant.quantityInStock;
+    }
+    
+    if (newQuantity > availableStock) {
+      throw new Error(`Insufficient stock. Available: ${availableStock}`);
+    }
+    
     item.quantity = newQuantity;
     item.subtotal = newQuantity * item.price;
     item.addedAt = new Date();

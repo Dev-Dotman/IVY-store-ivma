@@ -15,7 +15,7 @@ export async function POST(request) {
       );
     }
 
-    const { productId, quantity = 1 } = await request.json();
+    const { productId, quantity = 1, variantId, color, size, notes } = await request.json();
 
     if (!productId) {
       return NextResponse.json(
@@ -31,29 +31,49 @@ export async function POST(request) {
       );
     }
 
-    // Get or create cart (will always return the same cart for the customer)
+    // Prepare variant data if provided
+    let variantData = null;
+    if (variantId && color && size) {
+      variantData = {
+        variantId,
+        color,
+        size
+      };
+    }
+
+    // Get or create cart
     let cart = await Cart.getOrCreateCart(customerId);
 
-    // Add item to cart (simplified method)
-    cart = await cart.addItem(productId, quantity);
+    // Prepare product data
+    const productData = {
+      productId,
+      notes
+    };
+
+    // Add item to cart with variant info
+    cart = await cart.addItem(productData, quantity, variantData);
 
     return NextResponse.json({
       success: true,
       cart,
-      message: "Item added to cart successfully"
+      message: variantData 
+        ? `${color} - ${size} added to cart successfully`
+        : "Item added to cart successfully"
     });
   } catch (error) {
     console.error("Error adding to cart:", error);
     
     // Handle specific error types
-    if (error.message.includes('Product not found')) {
+    if (error.message.includes('Product not found') || error.message.includes('Variant not found')) {
       return NextResponse.json(
-        { success: false, message: "Product not found" },
+        { success: false, message: error.message },
         { status: 404 }
       );
     }
     
-    if (error.message.includes('not available') || error.message.includes('stock')) {
+    if (error.message.includes('not available') || 
+        error.message.includes('stock') || 
+        error.message.includes('variant selection')) {
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 400 }

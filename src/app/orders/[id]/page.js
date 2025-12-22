@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Package, ShoppingBag, ArrowLeft, MapPin, Phone, Mail, Calendar } from "lucide-react";
+import { CheckCircle, Package, ShoppingBag, ArrowLeft, MapPin, Phone, Mail, Calendar, Tag } from "lucide-react";
 
 export default function OrderConfirmationPage({ params }) {
   const router = useRouter();
@@ -204,16 +204,16 @@ export default function OrderConfirmationPage({ params }) {
           </div>
         </div>
 
-        {/* Order Items */}
+        {/* Order Items - Enhanced with Variant Display */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Order Items</h2>
           <div className="space-y-4">
             {order.items?.map((item, idx) => (
-              <div key={idx} className="flex gap-4 p-4 border border-gray-100 rounded-xl">
-                <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                  {item.productSnapshot?.image ? (
+              <div key={idx} className="flex gap-4 p-4 border border-gray-100 rounded-xl hover:shadow-md transition-shadow">
+                <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative">
+                  {item.productSnapshot?.image || item.variant?.image ? (
                     <img 
-                      src={item.productSnapshot.image} 
+                      src={item.variant?.image || item.productSnapshot.image} 
                       alt={item.productSnapshot.productName}
                       className="w-full h-full object-cover"
                     />
@@ -222,17 +222,69 @@ export default function OrderConfirmationPage({ params }) {
                       📦
                     </div>
                   )}
+                  {/* Variant Badge on Image */}
+                  {item.variant && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/70 backdrop-blur-sm text-white text-[10px] text-center py-0.5 px-1">
+                      Custom
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-semibold text-gray-900 mb-1">
                     {item.productSnapshot?.productName}
                   </h4>
+                  
+                  {/* Variant Details */}
+                  {item.variant && (
+                    <div className="flex items-center gap-2 mb-2">
+                      {item.variant.color && (
+                        <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-md font-medium">
+                          {item.variant.color}
+                        </span>
+                      )}
+                      {item.variant.size && (
+                        <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-md font-medium">
+                          {item.variant.size}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Product Details */}
+                  <div className="space-y-1 mb-2">
+                    {item.productSnapshot?.category && (
+                      <p className="text-xs text-gray-500">
+                        Category: {item.productSnapshot.category}
+                      </p>
+                    )}
+                    {item.productSnapshot?.sku && !item.variant?.sku && (
+                      <p className="text-xs text-gray-400">
+                        SKU: {item.productSnapshot.sku}
+                      </p>
+                    )}
+                    {item.variant?.sku && (
+                      <p className="text-xs text-gray-400">
+                        Variant SKU: {item.variant.sku}
+                      </p>
+                    )}
+                  </div>
+
                   <p className="text-sm text-gray-500 mb-2">
                     Quantity: {item.quantity} × {formatPrice(item.price)}
                   </p>
                   <p className="text-lg font-bold text-gray-900">
                     {formatPrice(item.subtotal)}
                   </p>
+
+                  {/* Store Badge */}
+                  {item.storeSnapshot?.storeName && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-1 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <Package className="w-3 h-3 text-emerald-600" />
+                      <span className="text-xs font-medium text-emerald-700">
+                        {item.storeSnapshot.storeName}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

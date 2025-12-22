@@ -59,32 +59,47 @@ export function CartProvider({ children }) {
     fetchCart();
   }, [isAuthenticated, authLoading, customer]);
 
-  const addToCart = async (productId, quantity, notes = '') => {
-    if (!isAuthenticated) {
-      throw new Error("Please sign in to add items to cart");
-    }
-
+  const addToCart = async (productId, quantity = 1, metadata = {}) => {
     try {
-      const response = await fetch("/api/cart/items", {
-        method: "POST",
+      const response = await fetch('/api/cart/add', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ productId, quantity, notes }),
+        body: JSON.stringify({
+          productId,
+          quantity,
+          variantId: metadata?.variantId,
+          color: metadata?.color,
+          size: metadata?.size,
+          notes: metadata?.notes
+        }),
       });
 
       const data = await response.json();
 
-      if (response.ok && data.success) {
-        setCart(data.cart);
-        return { success: true, cart: data.cart };
-      } else {
-        return { success: false, error: data.message };
+      if (!response.ok) {
+        return { 
+          success: false, 
+          error: data.message || 'Failed to add to cart' 
+        };
       }
+
+      // Update local cart state
+      setCart(data.cart);
+      
+      return { 
+        success: true, 
+        cart: data.cart,
+        message: data.message 
+      };
     } catch (error) {
-      console.error("Error adding to cart:", error);
-      return { success: false, error: "Failed to add item to cart" };
+      console.error('Error adding to cart:', error);
+      return { 
+        success: false, 
+        error: 'Failed to add item to cart' 
+      };
     }
   };
 

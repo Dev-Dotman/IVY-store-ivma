@@ -113,7 +113,7 @@ export async function POST(request) {
       );
     }
 
-    const { productId, quantity = 1 } = await request.json();
+    const { productId, quantity = 1, variantId, color, size, notes } = await request.json();
 
     if (!productId) {
       return NextResponse.json(
@@ -122,16 +122,34 @@ export async function POST(request) {
       );
     }
 
+    // Prepare variant data if provided
+    let variantData = null;
+    if (variantId && color && size) {
+      variantData = {
+        variantId,
+        color,
+        size
+      };
+    }
+
     // Get or create cart
     let cart = await Cart.getOrCreateCart(customerId);
 
-    // Add item to cart
-    cart = await cart.addItem(productId, quantity);
+    // Prepare product data
+    const productData = {
+      productId,
+      notes
+    };
+
+    // Add item to cart with variant info
+    cart = await cart.addItem(productData, quantity, variantData);
 
     return NextResponse.json({
       success: true,
       cart,
-      message: "Item added to cart successfully"
+      message: variantData 
+        ? `${color} - ${size} added to cart successfully`
+        : "Item added to cart successfully"
     });
   } catch (error) {
     console.error("Error adding to cart:", error);

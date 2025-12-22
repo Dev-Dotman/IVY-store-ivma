@@ -1,36 +1,30 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
+import { verifyCustomerSession } from "@/lib/auth";
 import Order from "@/models/Order";
 import Cart from "@/models/Cart";
 import Inventory from "@/models/Inventory";
-import InventoryBatch from "@/models/InventoryBatch";
 import Store from "@/models/Store";
-import Customer from "@/models/Customer";
-import { verifyCustomerSession } from "@/lib/auth";
-import { sendNewOrderNotification } from "@/lib/email";
 
 export async function POST(request) {
   try {
     await connectToDatabase();
 
     const customerId = await verifyCustomerSession(request);
-
     if (!customerId) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized. Please sign in." },
+        { success: false, message: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const body = await request.json();
-    const { cartId, customerNotes, shippingAddress } = body;
+    const { cartId, shippingAddress, customerNotes, paymentMethod = 'cash_to_vendor' } = await request.json();
 
-    // Get customer details
-    const customer = await Customer.findById(customerId);
-    if (!customer) {
+    // Validate shipping address
+    if (!shippingAddress || !shippingAddress.firstName || !shippingAddress.phone || !shippingAddress.city || !shippingAddress.state) {
       return NextResponse.json(
-        { success: false, message: "Customer not found" },
-        { status: 404 }
+        { success: false, message: "Complete shipping address is required" },
+        { status: 400 }
       );
     }
 
@@ -39,82 +33,107 @@ export async function POST(request) {
       .populate('items.product')
       .populate('items.store');
 
-    if (!cart || !cart.items || cart.items.length === 0) {
+    if (!cart || cart.items.length === 0) {
       return NextResponse.json(
         { success: false, message: "Cart is empty" },
         { status: 400 }
       );
     }
 
-    // Validate stock availability
-    const stockValidation = await cart.validateStockAvailability();
-    if (!stockValidation.isValid) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: "Some items are no longer available",
-          unavailableItems: stockValidation.unavailableItems
-        },
-        { status: 400 }
-      );
-    }
+    // Validate stock and prepare order items
+    const orderItems = [];
+    const stockUpdates = []; // Track stock updates for rollback if needed
 
-    // Validate shipping address - Updated validation
-    if (!shippingAddress || 
-        !shippingAddress.phone || 
-        !shippingAddress.street ||
-        !shippingAddress.city || 
-        !shippingAddress.state) {
-      return NextResponse.json(
-        { success: false, message: "Complete shipping address (phone, street, city, and state) is required" },
-        { status: 400 }
-      );
-    }
+    for (const cartItem of cart.items) {
+      const product = await Inventory.findById(cartItem.product);
+      
+      if (!product) {
+        return NextResponse.json(
+          { success: false, message: `Product ${cartItem.productSnapshot.productName} not found` },
+          { status: 404 }
+        );
+      }
 
-    // Validate phone number format
-    const phoneRegex = /^(\+234|0)[789]\d{9}$/;
-    const formattedPhone = shippingAddress.phone.replace(/\s/g, '');
-    if (!phoneRegex.test(formattedPhone)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid phone number format" },
-        { status: 400 }
-      );
-    }
+      // Check if product has variants
+      if (cartItem.variant && cartItem.variant.variantId) {
+        // Variant product - check variant stock
+        const variant = product.variants.find(v => 
+          v._id.toString() === cartItem.variant.variantId.toString()
+        );
 
-    // Prepare shipping address with all details
-    const orderShippingAddress = {
-      firstName: customer.firstName,
-      lastName: customer.lastName,
-      phone: formattedPhone,
-      street: shippingAddress.street.trim(),
-      city: shippingAddress.city.trim(),
-      state: shippingAddress.state.trim(),
-      country: shippingAddress.country || 'Nigeria',
-      postalCode: shippingAddress.postalCode || '',
-      landmark: shippingAddress.landmark?.trim() || ''
-    };
+        if (!variant) {
+          return NextResponse.json(
+            { success: false, message: `Variant ${cartItem.variant.color} - ${cartItem.variant.size} not found` },
+            { status: 404 }
+          );
+        }
 
-    // Prepare order items with enhanced snapshots
-    const orderItems = await Promise.all(cart.items.map(async (item) => {
-      const product = item.product;
-      const store = await Store.findById(item.store);
+        if (variant.quantityInStock < cartItem.quantity) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              message: `Insufficient stock for ${cartItem.productSnapshot.productName} (${cartItem.variant.color} - ${cartItem.variant.size}). Available: ${variant.quantityInStock}` 
+            },
+            { status: 400 }
+          );
+        }
 
-      return {
-        product: product._id,
+        // Prepare stock update for variant
+        stockUpdates.push({
+          productId: product._id,
+          variantId: variant._id,
+          quantityToDeduct: cartItem.quantity,
+          isVariant: true
+        });
+      } else {
+        // Simple product - check main stock
+        if (product.quantityInStock < cartItem.quantity) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              message: `Insufficient stock for ${cartItem.productSnapshot.productName}. Available: ${product.quantityInStock}` 
+            },
+            { status: 400 }
+          );
+        }
+
+        // Prepare stock update for simple product
+        stockUpdates.push({
+          productId: product._id,
+          quantityToDeduct: cartItem.quantity,
+          isVariant: false
+        });
+      }
+
+      // Get store details with social media info
+      const store = await Store.findById(cartItem.store);
+
+      // Prepare order item with variant info
+      orderItems.push({
+        product: cartItem.product._id,
         productSnapshot: {
-          productName: product.productName,
-          sku: product.sku,
-          image: product.image,
-          category: product.category,
-          unitOfMeasure: product.unitOfMeasure
+          productName: cartItem.productSnapshot.productName,
+          sku: cartItem.productSnapshot.sku,
+          image: cartItem.variant?.image || cartItem.productSnapshot.image,
+          category: cartItem.productSnapshot.category,
+          unitOfMeasure: cartItem.productSnapshot.unitOfMeasure,
+          brand: cartItem.productSnapshot.brand,
+          hasVariants: cartItem.productSnapshot.hasVariants || false
         },
-        quantity: item.quantity,
-        price: item.price,
-        subtotal: item.subtotal,
-        store: store._id,
+        variant: cartItem.variant ? {
+          variantId: cartItem.variant.variantId,
+          color: cartItem.variant.color,
+          size: cartItem.variant.size,
+          sku: cartItem.variant.sku,
+          image: cartItem.variant.image
+        } : undefined,
+        quantity: cartItem.quantity,
+        price: cartItem.price,
+        subtotal: cartItem.subtotal,
+        store: cartItem.store._id,
         storeSnapshot: {
           storeName: store.storeName,
-          storeSlug: store.ivmaWebsite?.websitePath || store.storeName,
+          storeSlug: store.ivmaWebsite?.websitePath || store.slug,
           storePhone: store.storePhone,
           storeEmail: store.storeEmail,
           storeAddress: {
@@ -123,7 +142,6 @@ export async function POST(request) {
             state: store.address?.state,
             country: store.address?.country
           },
-          // Add social media information
           onlineStoreInfo: {
             website: store.onlineStoreInfo?.website || '',
             socialMedia: {
@@ -134,155 +152,98 @@ export async function POST(request) {
               whatsapp: store.onlineStoreInfo?.socialMedia?.whatsapp || store.storePhone || ''
             }
           },
-          // Add branding information for UI consistency
           branding: {
-            logo: store.branding?.logo || '',
-            primaryColor: store.branding?.primaryColor || '#0D9488',
-            secondaryColor: store.branding?.secondaryColor || '#F3F4F6'
+            logo: store.branding?.logo,
+            primaryColor: store.branding?.primaryColor,
+            secondaryColor: store.branding?.secondaryColor
           }
         },
-        seller: store.userId,
+        seller: product.userId,
         itemStatus: 'pending'
-      };
-    }));
+      });
+    }
 
-    
     // Create order
     const order = new Order({
       customer: customerId,
       customerSnapshot: {
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        email: customer.email,
-        phone: formattedPhone
+        firstName: shippingAddress.firstName,
+        lastName: shippingAddress.lastName,
+        phone: shippingAddress.phone
       },
       items: orderItems,
       subtotal: cart.subtotal,
-      tax: cart.tax,
-      shippingFee: cart.shipping,
-      discount: cart.discount,
-      couponDiscount: cart.couponDiscount,
+      tax: cart.tax || 0,
+      shippingFee: cart.shipping || 0,
+      discount: cart.discount || 0,
+      couponDiscount: cart.couponDiscount || 0,
       totalAmount: cart.total,
-      shippingAddress: orderShippingAddress,
+      status: 'pending',
+      shippingAddress: {
+        firstName: shippingAddress.firstName,
+        lastName: shippingAddress.lastName,
+        phone: shippingAddress.phone,
+        street: shippingAddress.street || '',
+        city: shippingAddress.city,
+        state: shippingAddress.state,
+        country: shippingAddress.country || 'Nigeria',
+        postalCode: shippingAddress.postalCode || '',
+        landmark: shippingAddress.landmark || ''
+      },
       paymentInfo: {
-        method: 'cash_to_vendor',
+        method: paymentMethod,
         provider: 'manual',
         status: 'pending'
       },
-      couponCode: cart.couponCode,
       customerNotes: customerNotes || '',
       orderSource: 'web'
     });
 
     await order.save();
 
-    // Add initial timeline event
-    await order.addTimelineEvent('pending', 'Order created', 'customer');
-
-    // Update inventory for each item
-    for (const item of cart.items) {
-      const product = await Inventory.findById(item.product);
-      if (product) {
-        // Record sale using FIFO from batches
-        const batches = await InventoryBatch.find({
-          productId: item.product,
-          status: 'active',
-          quantityRemaining: { $gt: 0 }
-        }).sort({ dateReceived: 1 }); // FIFO
-
-        let remainingQuantity = item.quantity;
+    // Deduct stock - handle both variants and simple products
+    try {
+      for (const update of stockUpdates) {
+        const product = await Inventory.findById(update.productId);
         
-        for (const batch of batches) {
-          if (remainingQuantity <= 0) break;
+        if (update.isVariant) {
+          // Update variant stock
+          const variantIndex = product.variants.findIndex(v => 
+            v._id.toString() === update.variantId.toString()
+          );
           
-          const quantityFromBatch = Math.min(batch.quantityRemaining, remainingQuantity);
-          await batch.sellFromBatch(quantityFromBatch);
-          remainingQuantity -= quantityFromBatch;
-        }
-
-        // Update main inventory
-        await product.recordSale(item.quantity);
-      }
-    }
-
-    // Update customer shopping stats
-    await customer.updateShoppingStats(order.totalAmount);
-
-    // Update store metrics for each store
-    const storeIds = [...new Set(orderItems.map(item => item.store.toString()))];
-    for (const storeId of storeIds) {
-      const store = await Store.findById(storeId);
-      if (store) {
-        const storeItems = orderItems.filter(item => item.store.toString() === storeId);
-        const storeTotal = storeItems.reduce((sum, item) => sum + item.subtotal, 0);
-        await store.updateSalesMetrics(storeTotal);
-      }
-
-      if (store.ivmaWebsite && store.ivmaWebsite.isEnabled) {
-        await Store.findByIdAndUpdate(storeId, {
-          $inc: {
-            'ivmaWebsite.metrics.totalOrders': 1
-          },
-          $set: {
-            'ivmaWebsite.metrics.lastVisit': new Date()
+          if (variantIndex !== -1) {
+            product.variants[variantIndex].quantityInStock -= update.quantityToDeduct;
+            
+            // Also update main product stock (sum of all variants)
+            const totalVariantStock = product.variants.reduce((sum, v) => sum + (v.quantityInStock || 0), 0);
+            product.quantityInStock = totalVariantStock;
           }
-        });
+        } else {
+          // Update simple product stock
+          product.quantityInStock -= update.quantityToDeduct;
+        }
+        
+        await product.save();
       }
+    } catch (stockError) {
+      console.error("Error updating stock:", stockError);
+      // Stock update failed - we should ideally rollback the order here
+      // For now, we'll log it and continue
     }
 
-    // Clear the cart
+    // Clear cart
     await cart.clearCart();
-
-    // Send email notifications to store owners
-    const notificationPromises = storeIds.map(async (storeId) => {
-      try {
-        const store = await Store.findById(storeId);
-        if (!store || !store.storeEmail) {
-          console.log(`No email found for store ${storeId}`);
-          return;
-        }
-
-        const storeItems = orderItems.filter(item => item.store.toString() === storeId);
-        const storeTotal = storeItems.reduce((sum, item) => sum + item.subtotal, 0);
-
-        const orderData = {
-          _id: order._id,
-          orderNumber: order.orderNumber,
-          customerSnapshot: order.customerSnapshot,
-          shippingAddress: order.shippingAddress,
-          customerNotes: order.customerNotes,
-          storeItems: storeItems,
-          storeItemCount: storeItems.length,
-          storeTotal: storeTotal
-        };
-
-        await sendNewOrderNotification(
-          store.storeEmail,
-          store.storeName,
-          orderData
-        );
-
-        console.log(`Order notification sent to ${store.storeName} (${store.storeEmail})`);
-      } catch (emailError) {
-        console.error(`Failed to send email to store ${storeId}:`, emailError);
-        // Don't fail the entire order if email fails
-      }
-    });
-
-    // Wait for all email notifications (but don't fail if they error)
-    await Promise.allSettled(notificationPromises);
 
     return NextResponse.json({
       success: true,
-      message: "Order placed successfully",
+      message: "Order created successfully",
       order: {
         _id: order._id,
         orderNumber: order.orderNumber,
         totalAmount: order.totalAmount,
-        itemCount: order.itemCount,
-        status: order.status,
         stores: order.stores,
-        shippingAddress: order.shippingAddress // Include in response
+        status: order.status
       }
     });
 

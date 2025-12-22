@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { 
   ArrowLeft, Plus, Minus, ShoppingCart, Heart, MapPin, Tag, Package, Share2, Check, X,
   Shirt, Footprints, Watch, Droplets, UtensilsCrossed, Coffee, Smartphone, 
-  BookOpen, Home, Dumbbell, Car, Sparkles
+  BookOpen, Home, Dumbbell, Car, Sparkles, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import SignInModal from "@/components/auth/SignInModal";
 import SignUpModal from "@/components/auth/SignUpModal";
 import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
+import VariantSelectionModal from "@/components/product/VariantSelectionModal";
 import Toast from "@/components/ui/Toast";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,17 +31,28 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [showVariantModal, setShowVariantModal] = useState(false);
   const [toast, setToast] = useState(null);
-  const [selectedImage, setSelectedImage] = useState(initialProduct.image);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const primaryColor = store?.branding?.primaryColor || '#0D9488';
   const secondaryColor = store?.branding?.secondaryColor || '#F3F4F6';
   const currency = store?.settings?.currency || 'NGN';
 
+  // Get images array (prefer images array over single image)
+  const productImages = initialProduct.images && initialProduct.images.length > 0
+    ? initialProduct.images
+    : initialProduct.image
+    ? [{ url: initialProduct.image, isPrimary: true, colorTag: '', altText: initialProduct.productName }]
+    : [];
+
+  const currentImage = productImages[currentImageIndex] || { url: initialProduct.image };
+
+  // Simple quantity for non-variant products
   const maxQuantity = initialProduct.quantityInStock || 0;
   const isOutOfStock = maxQuantity === 0;
-  const isLowStock = maxQuantity > 0 && maxQuantity <= initialProduct.reorderLevel;
-  const shouldShowStock = isLowStock || isOutOfStock; // Only show stock when low or out
+  const isLowStock = maxQuantity > 0 && maxQuantity <= (initialProduct.reorderLevel || 5);
+  const shouldShowStock = isLowStock || isOutOfStock;
 
   // Update favicon when component mounts - SIMPLIFIED APPROACH
   useEffect(() => {
@@ -127,6 +139,19 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
     return `$${price?.toLocaleString()}`;
   };
 
+  // Image navigation (independent of color selection)
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) => 
+      prev === 0 ? productImages.length - 1 : prev - 1
+    );
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) => 
+      prev === productImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
   const handleQuantityChange = (newQuantity) => {
     if (newQuantity < 1) return;
     if (newQuantity > maxQuantity) {
@@ -136,24 +161,30 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
     setQuantity(newQuantity);
   };
 
+  // Simple add to cart for non-variant products
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
       setShowSignInModal(true);
       return;
     }
 
+    // If product has variants, show variant modal
+    if (initialProduct.hasVariants) {
+      setShowVariantModal(true);
+      return;
+    }
+
+    // Simple product add to cart
     setIsAddingToCart(true);
     try {
       const result = await addToCart(initialProduct._id, quantity);
       if (result.success) {
-        // Show success toast instead of alert
         setToast({
           message: `${quantity} ${quantity === 1 ? 'item' : 'items'} added to cart successfully!`,
           type: 'success'
         });
         setQuantity(1);
       } else {
-        // Show error toast
         setToast({
           message: result.error || "Failed to add item to cart",
           type: 'error'
@@ -163,6 +194,48 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
       console.error("Error adding to cart:", error);
       setToast({
         message: "Please sign in to add items to cart",
+        type: 'error'
+      });
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  // Handle variants add to cart from modal
+  const handleVariantsAddToCart = async (selectedVariants) => {
+    setIsAddingToCart(true);
+    try {
+      // Add each variant to cart
+      for (const variant of selectedVariants) {
+        // Pass variant data as the third parameter (metadata)
+        const result = await addToCart(
+          initialProduct._id, 
+          variant.quantity, // This is the quantity
+          {
+            variantId: variant.variantId,
+            color: variant.color,
+            size: variant.size
+          }
+        );
+        
+        if (!result.success) {
+          setToast({
+            message: result.error || `Failed to add ${variant.color} ${variant.size}`,
+            type: 'error'
+          });
+          return;
+        }
+      }
+
+      const totalItems = selectedVariants.reduce((sum, v) => sum + v.quantity, 0);
+      setToast({
+        message: `${totalItems} ${totalItems === 1 ? 'item' : 'items'} added to cart successfully!`,
+        type: 'success'
+      });
+    } catch (error) {
+      console.error("Error adding variants to cart:", error);
+      setToast({
+        message: "Failed to add items to cart",
         type: 'error'
       });
     } finally {
@@ -709,7 +782,10 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
   };
 
   const handleImageError = () => {
-    setSelectedImage('/placeholder-product.jpg');
+    // Try to use first image from images array or fallback
+    if (productImages.length > 0) {
+      setCurrentImageIndex(0);
+    }
   };
 
   return (
@@ -745,18 +821,52 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
             {/* Image Section */}
             <div className="p-4 sm:p-8 lg:p-12 bg-gradient-to-br from-gray-50 to-white">
               <div 
-                className="relative w-full aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-lg mb-4 sm:mb-6"
+                className="relative w-full aspect-square rounded-xl sm:rounded-2xl overflow-hidden shadow-lg mb-4 sm:mb-6 group"
                 style={{ backgroundColor: secondaryColor }}
               >
-                {selectedImage ? (
-                  <Image 
-                    src={selectedImage} 
-                    alt={initialProduct.productName}
-                    width={600}
-                    height={600}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                    onError={handleImageError}
-                  />
+                {currentImage?.url ? (
+                  <>
+                    <Image 
+                      src={currentImage.url} 
+                      alt={currentImage.altText || initialProduct.productName}
+                      width={600}
+                      height={600}
+                      className="w-full h-full object-cover transition-transform duration-500"
+                      onError={handleImageError}
+                    />
+                    
+                    {/* Image Navigation Arrows */}
+                    {productImages.length > 1 && (
+                      <>
+                        <button
+                          onClick={handlePrevImage}
+                          className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+                        >
+                          <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800" />
+                        </button>
+                        <button
+                          onClick={handleNextImage}
+                          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+                        >
+                          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800" />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Image Counter */}
+                    {productImages.length > 1 && (
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
+                        {currentImageIndex + 1} / {productImages.length}
+                      </div>
+                    )}
+
+                    {/* Color Tag Badge (if image has color tag) */}
+                    {currentImage.colorTag && (
+                      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium text-gray-900">
+                        {currentImage.colorTag}
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
@@ -766,6 +876,7 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
                   </div>
                 )}
 
+                {/* Stock badges */}
                 {isOutOfStock && (
                   <div className="absolute top-3 sm:top-6 left-3 sm:left-6 bg-red-600 text-white text-xs sm:text-sm font-semibold px-2 sm:px-4 py-1 sm:py-2 rounded-full shadow-lg backdrop-blur-sm">
                     Out of Stock
@@ -777,6 +888,7 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
                   </div>
                 )}
 
+                {/* Share and Wishlist buttons */}
                 <div className="absolute top-3 sm:top-6 right-3 sm:right-6 flex gap-2">
                   <button
                     onClick={handleShare}
@@ -810,7 +922,39 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
                 </div>
               </div>
 
-              <div className="flex gap-3 sm:grid sm:grid-cols-3 sm:gap-4 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0">
+              {/* Thumbnail Gallery */}
+              {productImages.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
+                  {productImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
+                      className={`relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                        currentImageIndex === idx 
+                          ? 'border-gray-900 scale-105 shadow-lg' 
+                          : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      <Image
+                        src={img.url}
+                        alt={img.altText || `${initialProduct.productName} - ${idx + 1}`}
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Color tag indicator on thumbnail */}
+                      {/* {img.colorTag && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[10px] text-center py-0.5 truncate px-1">
+                          {img.colorTag}
+                        </div>
+                      )} */}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Info Cards */}
+              {/* <div className="flex gap-3 sm:grid sm:grid-cols-3 sm:gap-4 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0">
                 {shouldShowStock && (
                   <div className="bg-white border border-gray-100 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center hover:shadow-md transition-shadow flex-shrink-0 min-w-[100px] sm:min-w-0">
                     <Package className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 mx-auto mb-1 sm:mb-2" />
@@ -828,7 +972,7 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
                   <p className="text-xs text-gray-500 mb-1">Location</p>
                   <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{initialProduct.location || 'Store'}</p>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             {/* Product Information */}
@@ -872,68 +1016,73 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
                 </div>
               )}
 
-              {/* Category-Specific Details */}
               {renderCategoryDetails()}
 
-              <div className="mb-6 sm:mb-8">
-                <label className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 block">
-                  Select Quantity
-                </label>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                  <div className="flex items-center bg-gray-50 border-2 border-gray-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-gray-300 transition-colors">
-                    <button
-                      onClick={() => handleQuantityChange(quantity - 1)}
-                      disabled={quantity <= 1 || isOutOfStock}
-                      className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Minus className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
-                    </button>
-                    <input
-                      type="number"
-                      value={quantity}
-                      onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
-                      disabled={isOutOfStock}
-                      className="w-16 sm:w-20 text-center text-lg sm:text-xl font-bold text-gray-900 bg-transparent focus:outline-none"
-                      min="1"
-                      max={maxQuantity}
-                    />
-                    <button
-                      onClick={() => handleQuantityChange(quantity + 1)}
-                      disabled={quantity >= maxQuantity || isOutOfStock}
-                      className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
-                    </button>
+              {/* Quantity Selection - Only for non-variant products */}
+              {!initialProduct.hasVariants && (
+                <div className="mb-6 sm:mb-8">
+                  <label className="text-lg font-semibold text-gray-900 mb-3 sm:mb-4 block">
+                    Select Quantity
+                  </label>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <div className="flex items-center bg-gray-50 border-2 border-gray-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-gray-300 transition-colors">
+                      <button
+                        onClick={() => handleQuantityChange(quantity - 1)}
+                        disabled={quantity <= 1 || isOutOfStock}
+                        className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Minus className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+                      </button>
+                      <input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                        disabled={isOutOfStock}
+                        className="w-16 sm:w-20 text-center text-lg sm:text-xl font-bold text-gray-900 bg-transparent focus:outline-none"
+                        min="1"
+                        max={maxQuantity}
+                      />
+                      <button
+                        onClick={() => handleQuantityChange(quantity + 1)}
+                        disabled={quantity >= maxQuantity || isOutOfStock}
+                        className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+                      </button>
+                    </div>
+                    {shouldShowStock && (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-semibold text-gray-900">{maxQuantity}</span> items available
+                      </p>
+                    )}
+                    {!shouldShowStock && maxQuantity > 0 && (
+                      <p className="text-sm text-green-600 font-medium">
+                        In Stock
+                      </p>
+                    )}
                   </div>
-                  {shouldShowStock && (
-                    <p className="text-sm text-gray-600">
-                      <span className="font-semibold text-gray-900">{maxQuantity}</span> items available
-                    </p>
-                  )}
-                  {!shouldShowStock && (
-                    <p className="text-sm text-green-600 font-medium">
-                      In Stock
-                    </p>
-                  )}
                 </div>
-              </div>
+              )}
 
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-600 text-base sm:text-lg">Total Price</span>
-                  <span className="text-2xl sm:text-3xl font-bold text-gray-900">
-                    {formatPrice(totalPrice)}
-                  </span>
+              {/* Total Price and Add to Cart */}
+              {!initialProduct.hasVariants && (
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-600 text-base sm:text-lg">Total Price</span>
+                    <span className="text-2xl sm:text-3xl font-bold text-gray-900">
+                      {formatPrice(totalPrice)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {quantity} {quantity === 1 ? 'item' : 'items'} × {formatPrice(initialProduct.sellingPrice)}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-500">
-                  {quantity} {quantity === 1 ? 'item' : 'items'} × {formatPrice(initialProduct.sellingPrice)}
-                </p>
-              </div>
+              )}
 
               <div className="flex flex-col sm:flex-row gap-3 mt-auto">
                 <button
                   onClick={handleAddToCart}
-                  disabled={isOutOfStock || isAddingToCart}
+                  disabled={!initialProduct.hasVariants && (isOutOfStock || isAddingToCart)}
                   className="w-full py-4 sm:py-5 px-6 rounded-xl sm:rounded-2xl text-white text-base sm:text-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
                   style={{ backgroundColor: primaryColor }}
                 >
@@ -945,12 +1094,12 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
                       </svg>
                       Adding...
                     </>
-                  ) : isOutOfStock ? (
+                  ) : isOutOfStock && !initialProduct.hasVariants ? (
                     'Out of Stock'
                   ) : (
                     <>
                       <ShoppingCart className="w-5 h-5 sm:w-6 sm:w-6" />
-                      Add to Cart
+                      {initialProduct.hasVariants ? 'Add to Cart' : 'Add to Cart'}
                     </>
                   )}
                 </button>
@@ -992,6 +1141,15 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
           </div>
         )}
       </div>
+
+      {/* Variant Selection Modal */}
+      <VariantSelectionModal
+        isOpen={showVariantModal}
+        onClose={() => setShowVariantModal(false)}
+        product={initialProduct}
+        onAddToCart={handleVariantsAddToCart}
+        primaryColor={primaryColor}
+      />
 
       {/* Sign In Prompt Modal - Keep this */}
       {showSignInPrompt && (

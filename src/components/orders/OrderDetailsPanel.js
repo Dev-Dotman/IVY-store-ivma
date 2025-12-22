@@ -248,45 +248,65 @@ export default function OrderDetailsPanel({
               <h3 className="text-sm font-bold text-gray-900 mb-3">
                 Order Items ({order.items?.length || 0})
               </h3>
-              <div className="space-y-2">
-                {order.items?.slice(0, 2).map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white border border-gray-200 rounded-lg p-3"
-                  >
-                    <div className="flex gap-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                        {item.productSnapshot?.image ? (
-                          <img 
-                            src={item.productSnapshot.image} 
-                            alt={item.productSnapshot.productName}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-lg">
-                            📦
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-900 text-xs truncate">
-                          {item.productSnapshot?.productName}
-                        </h4>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {item.quantity} × {formatPrice(item.price)}
+              <div className="space-y-3">
+                {order.items?.map((item, idx) => (
+                  <div key={idx} className="flex gap-3 p-3 border border-gray-100 rounded-lg">
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 relative">
+                      {item.productSnapshot?.image || item.variant?.image ? (
+                        <img 
+                          src={item.variant?.image || item.productSnapshot.image} 
+                          alt={item.productSnapshot.productName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xl">
+                          📦
+                        </div>
+                      )}
+                      {item.variant && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-[9px] text-center py-0.5">
+                          Custom
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
+                        {item.productSnapshot?.productName}
+                      </h4>
+                      
+                      {/* Variant Info */}
+                      {item.variant && (
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          {item.variant.color && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 bg-gray-100 text-gray-700 text-[10px] rounded">
+                              {item.variant.color}
+                            </span>
+                          )}
+                          {item.variant.size && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 bg-gray-100 text-gray-700 text-[10px] rounded">
+                              {item.variant.size}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-500">
+                          Qty: {item.quantity} × {formatPrice(item.price)}
                         </p>
-                        <p className="text-sm font-bold text-emerald-600 mt-1">
+                        <p className="text-sm font-bold text-gray-900">
                           {formatPrice(item.subtotal)}
                         </p>
                       </div>
+
+                      {item.variant?.sku && (
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          SKU: {item.variant.sku}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
-                {order.items?.length > 2 && (
-                  <p className="text-xs text-gray-500 text-center py-2">
-                    +{order.items.length - 2} more items
-                  </p>
-                )}
               </div>
             </div>
 
