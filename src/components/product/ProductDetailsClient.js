@@ -299,7 +299,7 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
 
   const handleWishlistToggle = async () => {
     if (!isAuthenticated) {
-      router.push(`/${slug}?signin=true`);
+      setShowSignInModal(true);
       return;
     }
 
