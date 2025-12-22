@@ -1075,8 +1075,8 @@ export default function StoreWebsite({ store }) {
                     <ProductCardMobile
                       key={product._id}
                       product={product}
-                      primaryColor={primaryColor}
-                      secondaryColor={secondaryColor}
+                      primaryColor={primaryColor || "#0D9488"} // Ensure fallback
+                      secondaryColor={secondaryColor || "#F3F4F6"} // Ensure fallback
                       currency={store.settings?.currency || "NGN"}
                     />
                   ) : (
