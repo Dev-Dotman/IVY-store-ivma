@@ -59,6 +59,10 @@ export default function StoreWebsite({ store }) {
   
   const [isMobile, setIsMobile] = useState(false);
   
+  // Add carousel state
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPrice, setSelectedPrice] = useState("all");
@@ -598,8 +602,68 @@ export default function StoreWebsite({ store }) {
 
   const hasMoreProducts = filteredProducts.length > 8;
 
+  // Auto-play carousel effect
+  useEffect(() => {
+    if (!isMobile || !isAutoPlaying) return;
+
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % 4); // 4 slides total
+    }, 5000); // Change slide every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [isMobile, isAutoPlaying]);
+
+  // Carousel slides data
+  const carouselSlides = [
+    {
+      type: 'store',
+      title: `Welcome to ${store.storeName}`,
+      description: store.storeDescription,
+      badge: store.storeType === 'physical' ? '🏪 Physical Store' : '🌐 Online Store',
+      showLogo: true,
+      showIvmaLogo: false
+    },
+    {
+      type: 'ivma',
+      title: "Nigeria's #1 Marketplace",
+      description: "Shop from thousands of verified stores across Nigeria",
+      badge: '🇳🇬 Trusted by Nigerians',
+      showLogo: false,
+      showIvmaLogo: true,
+      gradient: 'from-emerald-500 to-teal-600',
+      backgroundImage: 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&h=400&fit=crop'
+    },
+    {
+      type: 'ivma-features',
+      title: "Why Shop on IVMA?",
+      description: "Secure payments • Fast delivery • Quality products • 24/7 support",
+      badge: '✨ Your Shopping Companion',
+      showLogo: false,
+      showIvmaLogo: true,
+      gradient: 'from-blue-500 to-indigo-600',
+      backgroundImage: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800&h=400&fit=crop'
+    },
+    {
+      type: 'ivma-discover',
+      title: "Discover Amazing Deals",
+      description: "Browse thousands of products from local Nigerian stores",
+      badge: '🎉 Shop Local, Shop Smart',
+      showLogo: false,
+      showIvmaLogo: true,
+      gradient: 'from-purple-500 to-pink-600',
+      backgroundImage: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=400&fit=crop'
+    }
+  ];
+
+  const handleDotClick = (index) => {
+    setCurrentSlide(index);
+    setIsAutoPlaying(false);
+    // Resume autoplay after 10 seconds
+    setTimeout(() => setIsAutoPlaying(true), 10000);
+  };
+
   return (
-    <div className="min-h-screen bg-white relative" >
+    <div className="min-h-screen bg-white relative">
       {/* Animated Background Shapes */}
       {!isMobile && (
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" >
@@ -618,61 +682,151 @@ export default function StoreWebsite({ store }) {
       />
 
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8 relative z-10 min-h-screen">
-        {/* Animated Mobile Store Banner */}
+        {/* Enhanced Mobile Store Banner with Carousel */}
         {isMobile && (
-          <div className="mb-6 -mx-6 mx-auto relative rounded-xl overflow-hidden rounded-none " ref={mainRef} >
-            <div 
-              className="h-32 relative"
-              style={{
-                backgroundImage: store.branding?.banner 
-                  ? `url(${store.branding.banner})` 
-                  : `linear-gradient(135deg, ${primaryColor}20, ${primaryColor}40)`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundColor: store.branding?.banner ? 'transparent' : `${primaryColor}10`
-              }}
-            >
+          <div className="mb-6 -mx-6 mx-auto relative overflow-hidden" ref={mainRef}>
+            {/* Carousel Container - Increased height and border radius */}
+            <div className="relative h-40 rounded-2xl overflow-hidden" ref={bannerRef}>
+              {/* Slides */}
               <div 
-                className="absolute inset-0 backdrop-blur-sm"
-                style={{ 
-                  backgroundColor: `${primaryColor}20`,
-                  backdropFilter: 'blur(8px) saturate(120%)'
-                }}
-              />
-              
-              <div className="absolute inset-0 flex flex-col justify-center px-6 banner-content">
-                <div className="flex items-center gap-3 mb-2">
-                  {store.branding?.logo && (
-                    <img 
-                      src={store.branding.logo} 
-                      alt={store.storeName} 
-                      className="h-8 w-auto object-contain bg-white/20 backdrop-blur-sm rounded-lg p-1" 
+                className="flex transition-transform duration-500 ease-out h-full"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+              >
+                {carouselSlides.map((slide, index) => (
+                  <div 
+                    key={index}
+                    className="min-w-full h-40 relative flex-shrink-0"
+                    style={{
+                      backgroundImage: slide.type === 'store' && store.branding?.banner 
+                        ? `url(${store.branding.banner})` 
+                        : slide.backgroundImage 
+                          ? `url(${slide.backgroundImage})`
+                          : 'none',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundColor: slide.type === 'store' && store.branding?.banner 
+                        ? 'transparent' 
+                        : slide.type === 'store' 
+                          ? `${primaryColor}10` 
+                          : 'transparent'
+                    }}
+                  >
+                    {/* Gradient Background for IVMA slides */}
+                    {slide.type !== 'store' && (
+                      <div 
+                        className={`absolute inset-0 bg-gradient-to-br ${slide.gradient}`}
+                        style={{ opacity: 0.85 }}
+                      />
+                    )}
+
+                    {/* Backdrop Blur Overlay */}
+                    <div 
+                      className="absolute inset-0 backdrop-blur-sm"
+                      style={{ 
+                        backgroundColor: slide.type === 'store' 
+                          ? `${primaryColor}20` 
+                          : 'rgba(0, 0, 0, 0.3)',
+                        backdropFilter: 'blur(8px) saturate(120%)'
+                      }}
                     />
-                  )}
-                  <h1 className="text-xl font-bold text-white drop-shadow-lg">
-                    Welcome to {store.storeName}
-                  </h1>
-                </div>
-                
-                {store.storeDescription && (
-                  <p className="text-white/90 text-sm leading-relaxed drop-shadow-md line-clamp-1">
-                    {store.storeDescription}
-                  </p>
-                )}
-                
-                <div className="mt-2">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white/20 backdrop-blur-sm text-white border border-white/30">
-                    {store.storeType === 'physical' ? '🏪 Physical Store' : '🌐 Online Store'}
-                  </span>
-                </div>
+                    
+                    {/* Content - Scaled down text sizes */}
+                    <div className="absolute inset-0 flex flex-col justify-center px-6 banner-content">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        {/* Store Logo - Slightly smaller */}
+                        {slide.showLogo && store.branding?.logo && (
+                          <img 
+                            src={store.branding.logo} 
+                            alt={store.storeName} 
+                            className="h-7 w-auto object-contain bg-white/20 backdrop-blur-sm rounded-lg p-1" 
+                          />
+                        )}
+                        
+                        {/* IVMA Logo - Slightly smaller */}
+                        {slide.showIvmaLogo && (
+                          <img 
+                            src="/favicon-16x16.png"
+                            alt="IVMA Logo" 
+                            className="h-7 w-auto object-contain bg-white/90 backdrop-blur-sm rounded-lg p-1.5" 
+                          />
+                        )}
+                        
+                        {/* Fallback Icon - Smaller */}
+                        {slide.type !== 'store' && !slide.showIvmaLogo && (
+                          <div className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-base">
+                            🛍️
+                          </div>
+                        )}
+                        
+                        {/* Title - Scaled down from text-xl to text-base */}
+                        <h1 className="text-lg font-bold text-white drop-shadow-lg">
+                          {slide.title}
+                        </h1>
+                      </div>
+                      
+                      {/* Description - Scaled down from text-sm to text-xs */}
+                      {slide.description && (
+                        <p className="text-white/90 text-xs leading-relaxed drop-shadow-md line-clamp-2">
+                          {slide.description}
+                        </p>
+                      )}
+                      
+                      {/* Badge - Scaled down padding and text */}
+                      <div className="mt-1.5">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/20 backdrop-blur-sm text-white border border-white/30">
+                          {slide.badge}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Gradient Overlay */}
+                    {slide.type === 'store' && (
+                      <div 
+                        className="absolute inset-0 opacity-30"
+                        style={{
+                          background: `linear-gradient(45deg, ${primaryColor}60, transparent 70%)`
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
+
               
-              <div 
-                className="absolute inset-0 opacity-30"
-                style={{
-                  background: `linear-gradient(45deg, ${primaryColor}60, transparent 70%)`
-                }}
-              />
+
+              {/* Pause/Play indicator (optional) */}
+              {!isAutoPlaying && (
+                <div className="absolute top-2 right-2 z-20">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 py-0.5 text-white text-[10px] font-medium border border-white/30">
+                    Paused
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Carousel Dots - Now outside with dark styling */}
+            <div className="flex items-center justify-center gap-2 mt-3 z-20">
+              {carouselSlides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleDotClick(index)}
+                  className="transition-all duration-300"
+                  aria-label={`Go to slide ${index + 1}`}
+                >
+                  <div 
+                    className={`rounded-full transition-all duration-300 ${
+                      currentSlide === index 
+                        ? 'w-6 h-2' 
+                        : 'w-2 h-2'
+                    }`}
+                    style={{
+                      backgroundColor: currentSlide === index 
+                        ? primaryColor
+                        : 'rgba(156, 163, 175, 0.5)' // gray-400 with opacity
+                    }}
+                  />
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -743,7 +897,7 @@ export default function StoreWebsite({ store }) {
         )}
 
         {/* Search Bar - Icon moved outside to the right */}
-        <div className="mb-8 relative z-40" ref={filtersRef}>
+        <div className="mb-8 relative z-40" >
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <input
@@ -754,7 +908,7 @@ export default function StoreWebsite({ store }) {
                 className="w-full pl-4 pr-10 py-3 text-gray-900 placeholder-gray-400 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all text-sm sm:text-base shadow-sm"
                 style={{ 
                   backgroundColor: `${primaryColor}05`,
-                  borderColor: searchQuery ? primaryColor : `${primaryColor}20`,
+                  borderColor: searchQuery ? primaryColor : `${primaryColor}`,
                   '--tw-ring-color': primaryColor
                 }}
               />
