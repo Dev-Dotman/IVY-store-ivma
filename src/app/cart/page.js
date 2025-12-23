@@ -369,6 +369,119 @@ export default function CartPage() {
 
   const storeGroups = Object.values(itemsByStore);
 
+  // New state for per-store checkout
+  const [storeCheckoutModal, setStoreCheckoutModal] = useState(null); // storeGroup or null
+  const [isPlacingStoreOrder, setIsPlacingStoreOrder] = useState(false);
+  const [storeOrderError, setStoreOrderError] = useState(null);
+
+  // Per-store order handlers
+  const handleStorePlaceOrder = (storeGroup) => {
+    setStoreCheckoutModal({
+      storeGroup,
+      shippingAddress: {
+        phone: customer?.phone || '',
+        city: '',
+        state: ''
+      },
+      whatsAppValidated: false,
+      isValidatingWhatsApp: false,
+      orderError: null
+    });
+  };
+
+  const handleStoreShippingAddressChange = (e) => {
+    const { name, value } = e.target;
+    setStoreCheckoutModal((prev) => ({
+      ...prev,
+      shippingAddress: {
+        ...prev.shippingAddress,
+        [name]: value
+      },
+      whatsAppValidated: name === 'phone' ? false : prev.whatsAppValidated
+    }));
+  };
+
+  const handleStoreValidateWhatsApp = async () => {
+    const phone = storeCheckoutModal.shippingAddress.phone;
+    if (!phone || phone.trim() === '') {
+      setStoreCheckoutModal((prev) => ({ ...prev, orderError: 'Please enter a phone number' }));
+      return;
+    }
+    setStoreCheckoutModal((prev) => ({ ...prev, isValidatingWhatsApp: true, orderError: null }));
+    try {
+      const formattedPhone = phone.replace(/\s/g, '');
+      const nigerianPhoneRegex = /^(\+234|0)[789]\d{9}$/;
+      if (!nigerianPhoneRegex.test(formattedPhone)) {
+        setStoreCheckoutModal((prev) => ({
+          ...prev,
+          orderError: 'Please enter a valid Nigerian phone number (e.g., 08012345678 or +2348012345678)',
+          isValidatingWhatsApp: false
+        }));
+        return;
+      }
+      setStoreCheckoutModal((prev) => ({
+        ...prev,
+        whatsAppValidated: true,
+        isValidatingWhatsApp: false,
+        orderError: null
+      }));
+    } catch {
+      setStoreCheckoutModal((prev) => ({
+        ...prev,
+        orderError: 'Failed to validate phone number',
+        isValidatingWhatsApp: false
+      }));
+    }
+  };
+
+  const handleStoreConfirmOrder = async () => {
+    const { shippingAddress, storeGroup, whatsAppValidated } = storeCheckoutModal;
+    if (!shippingAddress.phone || !shippingAddress.city || !shippingAddress.state) {
+      setStoreCheckoutModal((prev) => ({ ...prev, orderError: 'Please provide your phone number, city, and state' }));
+      return;
+    }
+    if (!whatsAppValidated) {
+      setStoreCheckoutModal((prev) => ({ ...prev, orderError: 'Please validate your WhatsApp number first' }));
+      return;
+    }
+    setIsPlacingStoreOrder(true);
+    setStoreOrderError(null);
+    try {
+      // Prepare item IDs for this store
+      const itemIds = storeGroup.items.map(item => item._id);
+      const response = await fetch("/api/orders/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: 'include',
+        body: JSON.stringify({
+          cartId: cart._id,
+          itemIds, // Only items for this store
+          shippingAddress: {
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            phone: shippingAddress.phone,
+            city: shippingAddress.city,
+            state: shippingAddress.state,
+            country: 'Nigeria'
+          },
+          customerNotes: ""
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        await clearCart(); // Optionally, remove only these items from cart instead
+        setStoreCheckoutModal(null);
+        router.push(`/orders/${data.order._id}`);
+      } else {
+        setStoreOrderError(data.message || "Failed to place order");
+      }
+    } catch (error) {
+      setStoreOrderError("An error occurred while placing your order. Please try again.");
+    } finally {
+      setIsPlacingStoreOrder(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header - Mobile Optimized */}
@@ -406,7 +519,7 @@ export default function CartPage() {
           {/* Cart Items - Mobile Optimized with Expandable Details */}
           <div className="lg:col-span-2 space-y-3 md:space-y-6">
             {storeGroups.map((storeGroup, idx) => (
-              <div key={idx} className="bg-white rounded-xl md:rounded-2xl border border-gray-100 overflow-hidden">
+              <div key={idx} className="relative bg-white rounded-xl md:rounded-2xl border border-gray-100 overflow-hidden">
                 {/* Store Header */}
                 {storeGroup.storeSnapshot && (
                   <div className="bg-gray-50 px-3 md:px-6 py-2 md:py-3 border-b border-gray-100">
@@ -608,6 +721,17 @@ export default function CartPage() {
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Place Order Button for this store */}
+                <div className="absolute bottom-4 right-4 z-10">
+                  <button
+                    onClick={() => handleStorePlaceOrder(storeGroup)}
+                    className="px-5 py-3 bg-emerald-600 text-white rounded-xl font-semibold shadow-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    Place Order for {storeGroup.storeSnapshot?.storeName || 'Store'}
+                  </button>
                 </div>
               </div>
             ))}
@@ -879,6 +1003,115 @@ export default function CartPage() {
           formatPrice={formatPrice}
           openWhatsApp={openWhatsApp}
         />
+      )}
+
+      {/* Per-Store Checkout Modal */}
+      {storeCheckoutModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShoppingBag className="w-8 h-8 text-emerald-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                Complete Order for {storeCheckoutModal.storeGroup.storeSnapshot?.storeName || 'Store'}
+              </h3>
+              <p className="text-gray-600">Provide delivery details to proceed</p>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                WhatsApp Phone Number *
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="tel"
+                  name="phone"
+                  value={storeCheckoutModal.shippingAddress.phone}
+                  onChange={handleStoreShippingAddressChange}
+                  placeholder="08012345678 or +2348012345678"
+                  disabled={storeCheckoutModal.whatsAppValidated}
+                  className={`flex-1 px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 ${
+                    storeCheckoutModal.whatsAppValidated ? 'bg-green-50 border-green-300' : 'border-gray-300 bg-white'
+                  }`}
+                />
+                {!storeCheckoutModal.whatsAppValidated ? (
+                  <button
+                    onClick={handleStoreValidateWhatsApp}
+                    disabled={storeCheckoutModal.isValidatingWhatsApp}
+                    className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors disabled:opacity-50 flex-shrink-0"
+                  >
+                    {storeCheckoutModal.isValidatingWhatsApp ? 'Validating...' : 'Validate'}
+                  </button>
+                ) : (
+                  <div className="flex items-center px-4 bg-green-50 border border-green-300 rounded-xl flex-shrink-0">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Ensure the number above is your whatsapp number
+              </p>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                State *
+              </label>
+              <CustomDropdown
+                options={stateOptions}
+                value={storeCheckoutModal.shippingAddress.state}
+                onChange={(value) => handleStoreShippingAddressChange({ target: { name: 'state', value } })}
+                placeholder="Select your state"
+                backgroundColor="#FFFFFF"
+                error={false}
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                City *
+              </label>
+              <input
+                type="text"
+                name="city"
+                value={storeCheckoutModal.shippingAddress.city}
+                onChange={handleStoreShippingAddressChange}
+                placeholder="Enter your city"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-gray-900"
+              />
+            </div>
+            {storeCheckoutModal.orderError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-red-600 text-sm">{storeCheckoutModal.orderError}</p>
+              </div>
+            )}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setStoreCheckoutModal(null)}
+                disabled={isPlacingStoreOrder}
+                className="flex-1 py-3 border-2 border-gray-300 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleStoreConfirmOrder}
+                disabled={isPlacingStoreOrder || !storeCheckoutModal.whatsAppValidated || !storeCheckoutModal.shippingAddress.city || !storeCheckoutModal.shippingAddress.state}
+                className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isPlacingStoreOrder ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Placing Order...
+                  </>
+                ) : (
+                  <>Confirm Order</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

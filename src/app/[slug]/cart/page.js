@@ -22,6 +22,7 @@ import { useCart } from "@/contexts/CartContext";
 import CustomDropdown from "@/components/ui/CustomDropdown";
 import useStoreStore from "@/stores/storeStore";
 import WhatsAppContactModal from "@/components/orders/WhatsAppContactModal";
+import OrderModal from "@/components/cart/OrderModal";
 
 export default function StoreCartPage({ params }) {
   const router = useRouter();
@@ -65,6 +66,10 @@ export default function StoreCartPage({ params }) {
   const [redirectingToWhatsApp, setRedirectingToWhatsApp] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [expandedItems, setExpandedItems] = useState(new Set());
+
+  // Per-store checkout state
+  const [showStoreOrderModal, setShowStoreOrderModal] = useState(false);
+  const [selectedStoreGroup, setSelectedStoreGroup] = useState(null);
 
   // Screen size detection
   useEffect(() => {
@@ -423,24 +428,9 @@ export default function StoreCartPage({ params }) {
         const stores = data.order.stores || [];
 
         if (stores.length === 1) {
-          // Single store - auto-redirect to WhatsApp
+          // Single store - auto-redirect
           const store = stores[0];
           if (store.storeSnapshot?.storePhone) {
-            // setRedirectingToWhatsApp(true);
-
-            // // Show brief loading then redirect
-            // setTimeout(() => {
-            //   openWhatsApp(
-            //     store.storeSnapshot.storePhone,
-            //     store.storeSnapshot.storeName || store.storeName,
-            //     store.itemCount
-            //   );
-            //   setRedirectingToWhatsApp(false);
-
-            //   // Navigate to order details after WhatsApp redirect
-
-            // }, 1500);
-
             setTimeout(() => {
               router.push(`/${resolvedParams.slug}/orders/${data.order._id}`);
             }, 2000);
@@ -495,6 +485,50 @@ export default function StoreCartPage({ params }) {
 
   const storeGroups = Object.values(itemsByStore);
 
+  // Per-store order handlers - simplified
+  const handleStorePlaceOrder = (storeGroup) => {
+    setSelectedStoreGroup(storeGroup);
+    setShowStoreOrderModal(true);
+  };
+
+  const handleStoreConfirmOrder = async (formData) => {
+    try {
+      const itemIds = selectedStoreGroup.items.map((item) => item._id);
+      const response = await fetch("/api/orders/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          cartId: cart._id,
+          itemIds,
+          shippingAddress: {
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            phone: formData.phone,
+            street: formData.street,
+            city: formData.city,
+            state: formData.state,
+            country: "Nigeria",
+            landmark: formData.landmark || "",
+          },
+          customerNotes: "",
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        await clearCart();
+        setShowStoreOrderModal(false);
+        setSelectedStoreGroup(null);
+        router.push(`/${resolvedParams.slug}/orders/${data.order._id}`);
+      } else {
+        throw new Error(data.message || "Failed to place order");
+      }
+    } catch (error) {
+      console.error("Error placing order:", error);
+      throw error;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header - Mobile Optimized */}
@@ -540,8 +574,9 @@ export default function StoreCartPage({ params }) {
             {storeGroups.map((storeGroup, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-xl md:rounded-2xl border border-gray-100 overflow-hidden"
+                className="relative bg-white rounded-xl md:rounded-2xl border border-gray-100 overflow-hidden flex flex-col"
               >
+                {/* Store Header */}
                 {storeGroup.storeSnapshot && (
                   <div
                     className="px-3 md:px-6 py-2 md:py-3 border-b border-gray-100"
@@ -810,6 +845,44 @@ export default function StoreCartPage({ params }) {
                     );
                   })}
                 </div>
+
+                {/* Store Footer Panel with Place Order Button */}
+                <div
+                  className="px-3 md:px-6 py-3 md:py-4 border-t border-gray-100 bg-white flex items-center justify-between"
+                  style={{
+                    backgroundColor: `${primaryColor}05`,
+                    position: "relative",
+                    zIndex: 1,
+                  }}
+                >
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-500 font-medium mb-0.5">
+                      Store Subtotal
+                    </span>
+                    <span
+                      className="text-base md:text-lg font-bold"
+                      style={{ color: primaryColor }}
+                    >
+                      {formatPrice(
+                        storeGroup.items.reduce(
+                          (sum, item) => sum + (item.subtotal || item.price * item.quantity),
+                          0
+                        )
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleStorePlaceOrder(storeGroup)}
+                    className="px-4 py-2 md:px-6 md:py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all flex items-center gap-2 text-white text-sm md:text-base"
+                    style={{
+                      background: `linear-gradient(90deg, ${primaryColor} 60%, ${primaryColor} 100%)`,
+                      boxShadow: "0 2px 8px 0 rgba(16, 185, 129, 0.08)",
+                    }}
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="font-semibold">Place Order</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -878,7 +951,7 @@ export default function StoreCartPage({ params }) {
                   style={{ backgroundColor: primaryColor }}
                 >
                   <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
-                  Place Order
+                  Place Order for All Stores
                 </button>
               </div>
             </div>
@@ -1201,6 +1274,28 @@ export default function StoreCartPage({ params }) {
           primaryColor={primaryColor}
           formatPrice={formatPrice}
           openWhatsApp={openWhatsApp}
+        />
+      )}
+
+      {/* Per-Store Checkout Modal - Replaced with OrderModal component */}
+      {showStoreOrderModal && (
+        <OrderModal
+          isOpen={showStoreOrderModal}
+          onClose={() => {
+            setShowStoreOrderModal(false);
+            setSelectedStoreGroup(null);
+          }}
+          onConfirm={handleStoreConfirmOrder}
+          customer={customer}
+          storeGroup={selectedStoreGroup}
+          totalAmount={selectedStoreGroup?.items.reduce(
+            (sum, item) => sum + (item.subtotal || item.price * item.quantity),
+            0
+          )}
+          itemCount={selectedStoreGroup?.items.reduce((sum, item) => sum + item.quantity, 0)}
+          primaryColor={primaryColor}
+          secondaryColor={secondaryColor}
+          formatPrice={formatPrice}
         />
       )}
 
