@@ -169,6 +169,7 @@ export async function POST(request) {
       customerSnapshot: {
         firstName: shippingAddress.firstName,
         lastName: shippingAddress.lastName,
+        email: shippingAddress.email || '',
         phone: shippingAddress.phone
       },
       items: orderItems,

@@ -57,10 +57,16 @@ export default function OrderModal({
     }
   }, [isOpen]);
 
-  // Initialize phone from customer
+  // Initialize form data from customer
   useEffect(() => {
-    if (isOpen && customer?.phone) {
-      setFormData(prev => ({ ...prev, phone: customer.phone }));
+    if (isOpen && customer) {
+      setFormData(prev => ({ 
+        ...prev, 
+        phone: customer.phone || '',
+        email: customer.email || '',
+        firstName: customer.firstName || '',
+        lastName: customer.lastName || ''
+      }));
     }
   }, [isOpen, customer]);
 
@@ -116,6 +122,11 @@ export default function OrderModal({
     }
     if (!whatsAppValidated) {
       newErrors.phone = "Please validate your WhatsApp number first";
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Invalid email format";
     }
     if (!formData.street.trim()) newErrors.street = "Street address is required";
     if (!formData.city.trim()) newErrors.city = "City is required";
@@ -199,6 +210,34 @@ export default function OrderModal({
                 className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg sm:rounded-xl text-sm sm:text-base text-gray-900"
                 style={{ backgroundColor: secondaryColor }}
               />
+            </div>
+
+            {/* Email Address */}
+            <div>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                Email Address *
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                placeholder="your.email@example.com"
+                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg sm:rounded-xl focus:outline-none focus:ring-2 text-sm sm:text-base text-gray-900 ${
+                  errors.email ? "border-red-300" : "border-gray-300 bg-white"
+                }`}
+                style={{ "--tw-ring-color": primaryColor }}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {errors.email}
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Order confirmation will be sent to this email
+              </p>
             </div>
 
             {/* WhatsApp Phone Number */}

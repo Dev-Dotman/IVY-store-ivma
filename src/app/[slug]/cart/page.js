@@ -504,6 +504,7 @@ export default function StoreCartPage({ params }) {
           shippingAddress: {
             firstName: customer.firstName,
             lastName: customer.lastName,
+            email: formData.email, // Include email
             phone: formData.phone,
             street: formData.street,
             city: formData.city,
