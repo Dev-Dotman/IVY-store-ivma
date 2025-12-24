@@ -45,7 +45,7 @@ export async function POST(request) {
     await customer.save();
 
     // Create reset URL
-    const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://store.ivma.ng'}/reset-password?token=${resetToken}`;
 
     // Send email
     await sendPasswordResetEmail(
