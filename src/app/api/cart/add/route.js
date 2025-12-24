@@ -44,21 +44,37 @@ export async function POST(request) {
     // Get or create cart
     let cart = await Cart.getOrCreateCart(customerId);
 
-    // Prepare product data
+    // Prepare product data (don't pass price - let it use batch pricing)
     const productData = {
       productId,
       notes
     };
 
-    // Add item to cart with variant info
+    // Add item to cart with variant info - will automatically use batch pricing
     cart = await cart.addItem(productData, quantity, variantData);
+
+    // Log successful addition with pricing info
+    console.log(`Item added to cart with batch pricing:`, {
+      productId,
+      quantity,
+      variant: variantData,
+      batchInfo: cart.items[cart.items.length - 1].batch
+    });
 
     return NextResponse.json({
       success: true,
       cart,
       message: variantData 
         ? `${color} - ${size} added to cart successfully`
-        : "Item added to cart successfully"
+        : "Item added to cart successfully",
+      pricingInfo: cart.items[cart.items.length - 1].batch ? {
+        usingBatchPricing: true,
+        batchCode: cart.items[cart.items.length - 1].batch.batchCode,
+        price: cart.items[cart.items.length - 1].price
+      } : {
+        usingBatchPricing: false,
+        price: cart.items[cart.items.length - 1].price
+      }
     });
   } catch (error) {
     console.error("Error adding to cart:", error);

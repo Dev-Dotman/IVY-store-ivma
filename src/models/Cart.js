@@ -382,6 +382,7 @@ cartSchema.methods.recalculateSubtotal = function() {
 
 cartSchema.methods.addItem = async function(productData, quantity = 1, variantData = null) {
   const Inventory = mongoose.model('Inventory');
+  const InventoryBatch = mongoose.model('InventoryBatch');
   const Store = mongoose.model('Store');
   
   const { productId, price, notes } = productData;
@@ -404,10 +405,43 @@ cartSchema.methods.addItem = async function(productData, quantity = 1, variantDa
     throw new Error('Store not found');
   }
   
+  // Get batches for batch pricing (FIFO logic)
+  const batches = await InventoryBatch.find({
+    productId: productId,
+    status: 'active'
+  }).sort({ dateReceived: 1 }).lean();
+  
+  // Calculate actual remaining quantities
+  const batchesWithActualRemaining = batches.map(batch => {
+    const actualQuantityRemaining = (batch.quantityIn || 0) - (batch.quantitySold || 0);
+    return {
+      ...batch,
+      actualQuantityRemaining: Math.max(0, actualQuantityRemaining)
+    };
+  });
+  
+  // Filter to only batches with stock
+  const activeBatches = batchesWithActualRemaining.filter(batch => batch.actualQuantityRemaining > 0);
+  
+  // Find current active batch (FIFO - first batch with stock)
+  const currentActiveBatch = activeBatches.length > 0 ? activeBatches[0] : null;
+  
   // Validate variant if product has variants
   let variantInfo = null;
   let availableStock = product.quantityInStock;
   let itemPrice = price || product.sellingPrice;
+  let batchId = null;
+  let batchCode = null;
+  
+  // Use batch pricing if available and no explicit price override
+  if (currentActiveBatch && !price) {
+    itemPrice = currentActiveBatch.sellingPrice;
+    batchId = currentActiveBatch._id;
+    batchCode = currentActiveBatch.batchCode;
+    
+    // Calculate total available quantity from all batches
+    availableStock = activeBatches.reduce((sum, batch) => sum + batch.actualQuantityRemaining, 0);
+  }
   
   if (product.hasVariants && variantData) {
     const { variantId, color, size } = variantData;
@@ -436,12 +470,25 @@ cartSchema.methods.addItem = async function(productData, quantity = 1, variantDa
         ? variant.images[0] 
         : product.images?.find(img => img.colorTag === color)?.url || product.image
     };
+    
+    // For variants, use variant-specific pricing if no batch system
+    if (!currentActiveBatch) {
+      itemPrice = price || product.sellingPrice;
+    }
   } else if (product.hasVariants && !variantData) {
     throw new Error('This product requires variant selection (color and size)');
   } else {
-    // Simple product without variants
-    if (availableStock < quantity) {
-      throw new Error(`Insufficient stock. Available: ${availableStock}`);
+    // Simple product without variants - check batch stock
+    if (currentActiveBatch) {
+      // Use batch stock availability
+      if (availableStock < quantity) {
+        throw new Error(`Insufficient stock. Available: ${availableStock}`);
+      }
+    } else {
+      // Use product stock
+      if (product.quantityInStock < quantity) {
+        throw new Error(`Insufficient stock. Available: ${product.quantityInStock}`);
+      }
     }
   }
   
@@ -471,6 +518,14 @@ cartSchema.methods.addItem = async function(productData, quantity = 1, variantDa
     this.items[existingItemIndex].subtotal = newQuantity * this.items[existingItemIndex].price;
     this.items[existingItemIndex].addedAt = new Date();
     
+    // Update batch info if using batches
+    if (batchId) {
+      this.items[existingItemIndex].batch = {
+        batchId,
+        batchCode
+      };
+    }
+    
     if (notes) {
       this.items[existingItemIndex].notes = notes;
     }
@@ -494,19 +549,29 @@ cartSchema.methods.addItem = async function(productData, quantity = 1, variantDa
       websitePath: store.ivmaWebsite?.websitePath
     };
     
-    // Add new item
-    this.items.push({
+    // Add new item with batch information
+    const newItem = {
       product: productId,
       productSnapshot,
       variant: variantInfo || undefined,
       quantity,
-      price: itemPrice,
+      price: itemPrice, // Use batch price or product price
       subtotal: quantity * itemPrice,
       store: store._id,
       storeSnapshot,
       notes: notes || '',
       addedAt: new Date()
-    });
+    };
+    
+    // Add batch information if available
+    if (batchId) {
+      newItem.batch = {
+        batchId,
+        batchCode
+      };
+    }
+    
+    this.items.push(newItem);
   }
   
   return await this.save();
