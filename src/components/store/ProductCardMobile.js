@@ -5,7 +5,7 @@ import { Heart, ShoppingCart, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsInWishlist, useWishlistMutations } from '@/hooks/useWishlist';
 
-export default function ProductCardMobile({ product, primaryColor, currency, secondaryColor }) {
+export default function ProductCardMobile({ product, primaryColor, currency, secondaryColor, onNavigate }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
@@ -23,6 +23,7 @@ export default function ProductCardMobile({ product, primaryColor, currency, sec
   };
 
   const handleProductClick = () => {
+    if (onNavigate) onNavigate();
     const storeSlug = pathname.split('/')[1];
     router.push(`/${storeSlug}/product/${product._id}`);
   };

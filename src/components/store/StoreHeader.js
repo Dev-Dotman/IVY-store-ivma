@@ -7,6 +7,7 @@ import { useCart } from '@/contexts/CartContext';
 import SignInModal from '../auth/SignInModal';
 import SignUpModal from '../auth/SignUpModal';
 import ForgotPasswordModal from '../auth/ForgotPasswordModal';
+import LoadingOverlay from '../ui/LoadingOverlay';
 import useStoreStore from '@/stores/storeStore';
 
 export default function StoreHeader({ store, onSignInClick }) {
@@ -24,6 +25,7 @@ export default function StoreHeader({ store, onSignInClick }) {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Extract store slug from pathname
   const storeSlug = pathname.split('/')[1];
@@ -53,6 +55,7 @@ export default function StoreHeader({ store, onSignInClick }) {
       setRedirectAfterLogin(`/${storeSlug}/cart`);
       setShowSignIn(true);
     } else {
+      setIsNavigating(true);
       router.push(`/${storeSlug}/cart`);
     }
     setShowMobileMenu(false);
@@ -67,6 +70,7 @@ export default function StoreHeader({ store, onSignInClick }) {
       setRedirectAfterLogin(`/${storeSlug}/wishlist`);
       setShowSignIn(true);
     } else {
+      setIsNavigating(true);
       router.push(`/${storeSlug}/wishlist`);
     }
     setShowMobileMenu(false);
@@ -216,6 +220,7 @@ export default function StoreHeader({ store, onSignInClick }) {
                       <button 
                         onClick={() => {
                           setShowAccountMenu(false);
+                          setIsNavigating(true);
                           router.push(`/${storeSlug}/orders`);
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -227,6 +232,7 @@ export default function StoreHeader({ store, onSignInClick }) {
                       <button 
                         onClick={() => {
                           setShowAccountMenu(false);
+                          setIsNavigating(true);
                           router.push(`/${storeSlug}/wishlist`);
                         }}
                         className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -351,6 +357,7 @@ export default function StoreHeader({ store, onSignInClick }) {
                     <button
                       onClick={() => {
                         setShowMobileMenu(false);
+                        setIsNavigating(true);
                         router.push(`/${storeSlug}/orders`);
                       }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-xl transition-colors text-left"
@@ -428,6 +435,7 @@ export default function StoreHeader({ store, onSignInClick }) {
                 <button
                   onClick={() => {
                     setShowMobileMenu(false);
+                    setIsNavigating(true);
                     router.push(`/${storeSlug}`);
                   }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-xl transition-colors text-left"
@@ -507,6 +515,13 @@ export default function StoreHeader({ store, onSignInClick }) {
           onClick={() => setShowAccountMenu(false)}
         />
       )}
+
+      {/* Loading Overlay for Navigation */}
+      <LoadingOverlay 
+        isVisible={isNavigating} 
+        color={primaryColor}
+        message="Loading..."
+      />
     </>
   );
 

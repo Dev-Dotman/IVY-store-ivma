@@ -4,7 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Heart, MapPin, Tag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function ProductCard({ product, primaryColor, currency, secondaryColor }) {
+export default function ProductCard({ product, primaryColor, currency, secondaryColor, onNavigate }) {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
@@ -50,6 +50,7 @@ export default function ProductCard({ product, primaryColor, currency, secondary
 
   const handleProductClick = () => {
     // Extract store slug from current pathname
+    if (onNavigate) onNavigate();
     const storeSlug = pathname.split('/')[1];
     router.push(`/${storeSlug}/product/${product._id}`);
   };

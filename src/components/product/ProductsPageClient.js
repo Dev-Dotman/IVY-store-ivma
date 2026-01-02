@@ -6,6 +6,8 @@ import StoreHeader from "@/components/store/StoreHeader";
 import StoreFooter from "@/components/store/StoreFooter";
 import ProductCard from "@/components/store/ProductCard";
 import ProductCardMobile from "@/components/store/ProductCardMobile";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
+import FloatingCartButton from "@/components/ui/FloatingCartButton";
 import { useProducts } from "@/hooks/useProducts";
 
 export default function ProductsPageClient({ store, products: initialProducts, slug }) {
@@ -19,6 +21,7 @@ export default function ProductsPageClient({ store, products: initialProducts, s
   const [sortBy, setSortBy] = useState("default");
   const [viewMode, setViewMode] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Get category from URL params, default to 'all'
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -120,7 +123,10 @@ export default function ProductsPageClient({ store, products: initialProducts, s
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => router.push(`/${slug}`)}
+                onClick={() => {
+                  setIsNavigating(true);
+                  router.push(`/${slug}`);
+                }}
                 className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -314,6 +320,7 @@ export default function ProductsPageClient({ store, products: initialProducts, s
                   primaryColor={primaryColor}
                   secondaryColor={secondaryColor}
                   currency={store.settings?.currency || "NGN"}
+                  onNavigate={() => setIsNavigating(true)}
                 />
               ) : viewMode === 'grid' ? (
                 <ProductCard
@@ -322,13 +329,17 @@ export default function ProductsPageClient({ store, products: initialProducts, s
                   primaryColor={primaryColor}
                   secondaryColor={secondaryColor}
                   currency={store.settings?.currency || "NGN"}
+                  onNavigate={() => setIsNavigating(true)}
                 />
               ) : (
                 // List View (Desktop)
                 <div
                   key={product._id}
                   className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => router.push(`/${slug}/product/${product._id}`)}
+                  onClick={() => {
+                    setIsNavigating(true);
+                    router.push(`/${slug}/product/${product._id}`);
+                  }}
                 >
                   <div className="flex gap-6">
                     {/* Product Image */}
@@ -390,6 +401,16 @@ export default function ProductsPageClient({ store, products: initialProducts, s
       </div>
 
       <StoreFooter />
+
+      {/* Loading Overlay for Navigation */}
+      <LoadingOverlay 
+        isVisible={isNavigating || isLoading} 
+        color={primaryColor}
+        message={isNavigating ? "Loading product..." : "Loading products..."}
+      />
+
+      {/* Floating Cart Button */}
+      <FloatingCartButton onNavigate={() => setIsNavigating(true)} />
 
       <style jsx>{`
         .scrollbar-hide {

@@ -44,6 +44,8 @@ import useStoreStore from "@/stores/storeStore";
 import SignInModal from "./auth/SignInModal";
 import SignUpModal from "./auth/SignUpModal";
 import ForgotPasswordModal from "./auth/ForgotPasswordModal";
+import LoadingOverlay from "./ui/LoadingOverlay";
+import FloatingCartButton from "./ui/FloatingCartButton";
 import { useProducts } from "@/hooks/useProducts";
 
 // Register GSAP plugins
@@ -58,6 +60,7 @@ export default function StoreWebsite({ store }) {
   const { data: products = [], isLoading: loading, error } = useProducts(store._id);
   
   const [isMobile, setIsMobile] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Add carousel state
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -260,6 +263,7 @@ export default function StoreWebsite({ store }) {
 
   const handleCategoryClick = (categoryName) => {
     // Navigate to products page with category filter
+    setIsNavigating(true);
     router.push(`/${store.ivmaWebsite?.websitePath}/products?category=${encodeURIComponent(categoryName)}`);
   };
 
@@ -837,7 +841,10 @@ export default function StoreWebsite({ store }) {
             <div className="px-6 flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold text-gray-900">Category</h3>
               <button
-                onClick={() => router.push(`/${store.ivmaWebsite?.websitePath}/products`)}
+                onClick={() => {
+                  setIsNavigating(true);
+                  router.push(`/${store.ivmaWebsite?.websitePath}/products`);
+                }}
                 className="text-sm font-medium"
                 style={{ color: primaryColor }}
               >
@@ -1078,6 +1085,7 @@ export default function StoreWebsite({ store }) {
                       primaryColor={primaryColor || "#0D9488"} // Ensure fallback
                       secondaryColor={secondaryColor || "#F3F4F6"} // Ensure fallback
                       currency={store.settings?.currency || "NGN"}
+                      onNavigate={() => setIsNavigating(true)}
                     />
                   ) : (
                     <ProductCard
@@ -1086,6 +1094,7 @@ export default function StoreWebsite({ store }) {
                       primaryColor={primaryColor}
                       secondaryColor={secondaryColor}
                       currency={store.settings?.currency || "NGN"}
+                      onNavigate={() => setIsNavigating(true)}
                     />
                   )
                 ))}
@@ -1094,7 +1103,10 @@ export default function StoreWebsite({ store }) {
               {/* See All Button - Only show if there are more than 8 products */}
                 <div className="flex items-center justify-center mt-12">
                   <button
-                    onClick={() => router.push(`/${store.ivmaWebsite?.websitePath}/products`)}
+                    onClick={() => {
+                      setIsNavigating(true);
+                      router.push(`/${store.ivmaWebsite?.websitePath}/products`);
+                    }}
                     className="inline-flex items-center gap-2 px-8 py-4 text-white rounded-xl font-semibold hover:opacity-90 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
                     style={{ backgroundColor: primaryColor }}
                   >
@@ -1178,6 +1190,16 @@ export default function StoreWebsite({ store }) {
         selectedAvailability={selectedAvailability}
         onSelect={setSelectedAvailability}
       />
+
+      {/* Loading Overlay */}
+      <LoadingOverlay 
+        isVisible={loading || isNavigating} 
+        color={primaryColor}
+        message={isNavigating ? "Loading product..." : "Loading products..."}
+      />
+
+      {/* Floating Cart Button */}
+      <FloatingCartButton onNavigate={() => setIsNavigating(true)} />
 
       <style jsx>{`
         .scrollbar-hide {

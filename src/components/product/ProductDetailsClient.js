@@ -13,6 +13,8 @@ import SignInModal from "@/components/auth/SignInModal";
 import SignUpModal from "@/components/auth/SignUpModal";
 import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
 import VariantSelectionModal from "@/components/product/VariantSelectionModal";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
+import FloatingCartButton from "@/components/ui/FloatingCartButton";
 import Toast from "@/components/ui/Toast";
 import Image from "next/image";
 import Link from "next/link";
@@ -34,6 +36,7 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [toast, setToast] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const primaryColor = store?.branding?.primaryColor || '#0D9488';
   const secondaryColor = store?.branding?.secondaryColor || '#F3F4F6';
@@ -795,7 +798,10 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => router.push(`/${slug}`)}
+              onClick={() => {
+                setIsNavigating(true);
+                router.push(`/${slug}`);
+              }}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors group"
             >
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -1239,6 +1245,16 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
           onClose={() => setToast(null)}
         />
       )}
+
+      {/* Loading Overlay for Navigation */}
+      <LoadingOverlay 
+        isVisible={isNavigating} 
+        color={primaryColor}
+        message="Loading..."
+      />
+
+      {/* Floating Cart Button */}
+      <FloatingCartButton onNavigate={() => setIsNavigating(true)} />
 
       <style jsx>{`
         @keyframes fade-in {
