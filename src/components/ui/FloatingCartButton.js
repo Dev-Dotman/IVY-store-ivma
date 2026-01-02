@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
@@ -11,12 +12,22 @@ export default function FloatingCartButton({ onNavigate }) {
   const { getCartCount } = useCart();
   const { isAuthenticated } = useAuth();
   const { currentStore } = useStoreStore();
+  const [showPulse, setShowPulse] = useState(true);
   
   const primaryColor = currentStore?.branding?.primaryColor || '#0D9488';
   const cartCount = getCartCount();
   
   // Extract store slug from pathname
   const storeSlug = pathname.split('/')[1];
+  
+  // Stop pulse animation after 5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowPulse(false);
+    }, 5000);
+    
+    return () => clearTimeout(timer);
+  }, []);
   
   // Don't show on cart page
   if (pathname.includes('/cart')) {
@@ -35,11 +46,13 @@ export default function FloatingCartButton({ onNavigate }) {
       style={{ backgroundColor: primaryColor }}
       aria-label="View cart"
     >
-      {/* Ripple effect */}
-      <div 
-        className="absolute inset-0 rounded-full animate-ping opacity-20"
-        style={{ backgroundColor: primaryColor }}
-      />
+      {/* Ripple effect - only show for 5 seconds */}
+      {showPulse && (
+        <div 
+          className="absolute inset-0 rounded-full animate-ping opacity-20"
+          style={{ backgroundColor: primaryColor }}
+        />
+      )}
       
       {/* Cart Icon */}
       <div className="relative z-10">
