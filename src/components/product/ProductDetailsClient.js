@@ -1254,7 +1254,10 @@ export default function ProductDetailsClient({ store, product: initialProduct, s
       />
 
       {/* Floating Cart Button */}
-      <FloatingCartButton onNavigate={() => setIsNavigating(true)} />
+      <FloatingCartButton 
+        onNavigate={() => setIsNavigating(true)}
+        onSignInRequired={() => setShowSignInModal(true)}
+      />
 
       <style jsx>{`
         @keyframes fade-in {

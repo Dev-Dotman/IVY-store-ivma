@@ -125,6 +125,14 @@ export function AuthProvider({ children }) {
         }
 
         return { success: true, customer: data.customer };
+      } else if (data.needsVerification) {
+        // User exists but email not verified
+        setError(data.message);
+        return { 
+          success: false, 
+          needsVerification: true, 
+          error: data.message 
+        };
       } else {
         setError(data.message);
         return { success: false, error: data.message };

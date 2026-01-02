@@ -1199,7 +1199,10 @@ export default function StoreWebsite({ store }) {
       />
 
       {/* Floating Cart Button */}
-      <FloatingCartButton onNavigate={() => setIsNavigating(true)} />
+      <FloatingCartButton 
+        onNavigate={() => setIsNavigating(true)}
+        onSignInRequired={() => setShowSignInModal(true)}
+      />
 
       <style jsx>{`
         .scrollbar-hide {

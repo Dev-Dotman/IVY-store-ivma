@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import Customer from "@/models/Customer";
 import { verifyPassword, createSession } from "@/lib/auth";
+import { sendVerificationEmail } from "@/lib/email";
 
 export async function POST(request) {
   try {
@@ -60,11 +61,23 @@ export async function POST(request) {
 
     // Check if email is verified
     if (!customer.isVerified) {
+      // Generate new verification code
+      const verificationCode = customer.generateVerificationCode();
+      await customer.save();
+      
+      // Send verification email
+      try {
+        await sendVerificationEmail(customer.email, customer.firstName, verificationCode );
+        console.log('Verification email sent to:', customer.email);
+      } catch (emailError) {
+        console.error('Failed to send verification email:', emailError);
+      }
+      
       return NextResponse.json(
         { 
           success: false, 
-          message: "Please verify your email before signing in",
-          requiresVerification: true 
+          message: "Please verify your email. We've sent a new verification code to your email.",
+          needsVerification: true 
         },
         { status: 403 }
       );

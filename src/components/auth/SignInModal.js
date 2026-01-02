@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import VerifyEmailModal from "./VerifyEmailModal";
 
 export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onForgotPassword }) {
   const { login, setRedirectAfterLogin } = useAuth();
@@ -13,6 +14,9 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onForgo
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showVerifyEmail, setShowVerifyEmail] = useState(false);
+  const [emailToVerify, setEmailToVerify] = useState("");
+  const [savedPassword, setSavedPassword] = useState("");
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -68,11 +72,18 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onForgo
           password: "",
           rememberMe: false,
         });
+        setSavedPassword("");
         
         // Close modal
         onClose();
         
         // Context will handle redirect if set
+      } else if (result.needsVerification) {
+        // User needs email verification - save credentials for auto-login after verification
+        setEmailToVerify(formData.email);
+        setSavedPassword(formData.password);
+        setShowVerifyEmail(true);
+        setErrors({ submit: result.error || "Please verify your email to continue" });
       } else {
         setErrors({ submit: result.error || "Login failed" });
       }
@@ -91,8 +102,50 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onForgo
         rememberMe: false,
       });
       setErrors({});
+      setShowVerifyEmail(false);
+      setEmailToVerify("");
+      setSavedPassword("");
       onClose();
     }
+  };
+
+  const handleVerified = async (customer) => {
+    // After verification, reset errors and automatically sign in
+    setShowVerifyEmail(false);
+    setErrors({});
+    setIsSubmitting(true);
+    
+    try {
+      // Automatically login with saved credentials
+      const result = await login(emailToVerify, savedPassword);
+      
+      if (result.success) {
+        // Reset form
+        setFormData({
+          email: "",
+          password: "",
+          rememberMe: false,
+        });
+        setSavedPassword("");
+        setEmailToVerify("");
+        
+        // Close the sign-in modal
+        onClose();
+      } else {
+        // Show error if auto-login fails
+        setErrors({ submit: result.error || "Login failed. Please try signing in again." });
+      }
+    } catch (error) {
+      setErrors({ submit: "An unexpected error occurred. Please try signing in again." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBackFromVerify = () => {
+    setShowVerifyEmail(false);
+    setEmailToVerify("");
+    setSavedPassword("");
   };
 
   if (!isOpen) return null;
@@ -276,6 +329,15 @@ export default function SignInModal({ isOpen, onClose, onSwitchToSignUp, onForgo
           </div>
         </div>
       </div>
+
+      {/* Verify Email Modal */}
+      <VerifyEmailModal
+        isOpen={showVerifyEmail}
+        email={emailToVerify}
+        onClose={handleClose}
+        onVerified={handleVerified}
+        onBack={handleBackFromVerify}
+      />
     </div>
   );
 }

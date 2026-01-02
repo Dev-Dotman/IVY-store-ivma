@@ -335,6 +335,13 @@ customerSchema.statics.getTopCustomers = function(limit = 10) {
 };
 
 // Instance methods
+customerSchema.methods.generateVerificationCode = function() {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  this.verificationToken = code;
+  this.verificationTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  return code;
+};
+
 customerSchema.methods.verifyCustomer = async function() {
   this.isVerified = true;
   this.verificationToken = null;

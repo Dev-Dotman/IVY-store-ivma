@@ -8,6 +8,9 @@ import ProductCard from "@/components/store/ProductCard";
 import ProductCardMobile from "@/components/store/ProductCardMobile";
 import LoadingOverlay from "@/components/ui/LoadingOverlay";
 import FloatingCartButton from "@/components/ui/FloatingCartButton";
+import SignInModal from "@/components/auth/SignInModal";
+import SignUpModal from "@/components/auth/SignUpModal";
+import ForgotPasswordModal from "@/components/auth/ForgotPasswordModal";
 import { useProducts } from "@/hooks/useProducts";
 
 export default function ProductsPageClient({ store, products: initialProducts, slug }) {
@@ -22,6 +25,9 @@ export default function ProductsPageClient({ store, products: initialProducts, s
   const [viewMode, setViewMode] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [isNavigating, setIsNavigating] = useState(false);
+  const [showSignInModal, setShowSignInModal] = useState(false);
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   
   // Get category from URL params, default to 'all'
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -410,7 +416,42 @@ export default function ProductsPageClient({ store, products: initialProducts, s
       />
 
       {/* Floating Cart Button */}
-      <FloatingCartButton onNavigate={() => setIsNavigating(true)} />
+      <FloatingCartButton 
+        onNavigate={() => setIsNavigating(true)}
+        onSignInRequired={() => setShowSignInModal(true)}
+      />
+
+      {/* Auth Modals */}
+      <SignInModal
+        isOpen={showSignInModal}
+        onClose={() => setShowSignInModal(false)}
+        onSwitchToSignUp={() => {
+          setShowSignInModal(false);
+          setShowSignUpModal(true);
+        }}
+        onForgotPassword={() => {
+          setShowSignInModal(false);
+          setShowForgotPasswordModal(true);
+        }}
+      />
+
+      <SignUpModal
+        isOpen={showSignUpModal}
+        onClose={() => setShowSignUpModal(false)}
+        onSwitchToSignIn={() => {
+          setShowSignUpModal(false);
+          setShowSignInModal(true);
+        }}
+      />
+
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        onBackToSignIn={() => {
+          setShowForgotPasswordModal(false);
+          setShowSignInModal(true);
+        }}
+      />
 
       <style jsx>{`
         .scrollbar-hide {

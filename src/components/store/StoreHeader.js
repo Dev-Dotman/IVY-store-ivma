@@ -121,19 +121,14 @@ export default function StoreHeader({ store, onSignInClick }) {
                 </h1>
               </div>
 
-              {/* Right: Cart Icon + Hamburger Menu */}
+              {/* Right: Wishlist Icon + Hamburger Menu */}
               <div className="flex items-center gap-2">
-                {/* Cart Icon - Minimalistic */}
+                {/* Wishlist Icon - Minimalistic */}
                 <button 
-                  onClick={handleCartClick}
-                  className="relative p-2 hover:bg-gray-50 rounded-xl transition-colors"
+                  onClick={handleWishlistClick}
+                  className="p-2 hover:bg-gray-50 rounded-xl transition-colors"
                 >
-                  <ShoppingCart className="w-5 h-5 text-gray-600" />
-                  {getCartCount() > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-semibold">
-                      {getCartCount()}
-                    </span>
-                  )}
+                  <Heart className="w-5 h-5 text-gray-600" />
                 </button>
 
                 {/* Hamburger Menu */}

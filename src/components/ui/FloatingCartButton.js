@@ -6,7 +6,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import useStoreStore from '@/stores/storeStore';
 
-export default function FloatingCartButton({ onNavigate }) {
+export default function FloatingCartButton({ onNavigate, onSignInRequired }) {
   const router = useRouter();
   const pathname = usePathname();
   const { getCartCount } = useCart();
@@ -35,6 +35,16 @@ export default function FloatingCartButton({ onNavigate }) {
   }
 
   const handleClick = () => {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      // Trigger sign in modal if callback is provided
+      if (onSignInRequired) {
+        onSignInRequired();
+      }
+      return;
+    }
+    
+    // User is authenticated, proceed with navigation
     if (onNavigate) onNavigate();
     router.push(`/${storeSlug}/cart`);
   };
