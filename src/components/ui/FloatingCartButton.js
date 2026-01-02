@@ -60,7 +60,7 @@ export default function FloatingCartButton({ onNavigate }) {
         
         {/* Cart Count Badge */}
         {cartCount > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-lg animate-bounce">
+          <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-lg">
             {cartCount > 99 ? '99+' : cartCount}
           </span>
         )}
