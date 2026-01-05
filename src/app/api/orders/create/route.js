@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { verifyCustomerSession } from "@/lib/auth";
+import { sendNewOrderNotification } from "@/lib/email";
 import Order from "@/models/Order";
 import Cart from "@/models/Cart";
 import Inventory from "@/models/Inventory";
@@ -344,6 +345,57 @@ export async function POST(request) {
     } else {
       // Clear entire cart
       await cart.clearCart();
+    }
+
+    // Send email notifications to store owners
+    try {
+      // Group items by store to send one email per store
+      const storeGroupedItems = {};
+      
+      for (const item of orderItems) {
+        const storeId = item.store.toString();
+        if (!storeGroupedItems[storeId]) {
+          storeGroupedItems[storeId] = {
+            store: item.storeSnapshot,
+            items: [],
+            total: 0
+          };
+        }
+        storeGroupedItems[storeId].items.push(item);
+        storeGroupedItems[storeId].total += item.subtotal;
+      }
+
+      // Send email to each store
+      for (const [storeId, storeData] of Object.entries(storeGroupedItems)) {
+        const storeEmail = storeData.store.storeEmail;
+        
+        if (storeEmail) {
+          const emailData = {
+            _id: order._id,
+            orderNumber: order.orderNumber,
+            customerSnapshot: order.customerSnapshot,
+            shippingAddress: order.shippingAddress,
+            customerNotes: order.customerNotes,
+            storeItems: storeData.items,
+            storeTotal: storeData.total,
+            storeItemCount: storeData.items.reduce((sum, item) => sum + item.quantity, 0)
+          };
+
+          await sendNewOrderNotification(
+            storeEmail,
+            storeData.store.storeName,
+            emailData
+          );
+          
+          console.log(`Order notification email sent to ${storeData.store.storeName} (${storeEmail})`);
+        } else {
+          console.warn(`No email found for store: ${storeData.store.storeName}`);
+        }
+      }
+    } catch (emailError) {
+      // Log email error but don't fail the order
+      console.error("Error sending order notification emails:", emailError);
+      // Continue with success response even if email fails
     }
 
     return NextResponse.json({
