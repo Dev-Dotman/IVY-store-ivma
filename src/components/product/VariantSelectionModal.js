@@ -187,7 +187,7 @@ export default function VariantSelectionModal({
           </div>
 
           {/* Content - Scrollable area */}
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 overscroll-contain">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 overscroll-contain">
             {/* Product Info - Compact on mobile */}
             <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 rounded-xl">
               <Image

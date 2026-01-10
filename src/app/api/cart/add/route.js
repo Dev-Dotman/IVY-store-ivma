@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { verifyCustomerSession } from "@/lib/auth";
 import Cart from "@/models/Cart";
+import InventoryBatch from "@/models/InventoryBatch";
 
 export async function POST(request) {
   try {
