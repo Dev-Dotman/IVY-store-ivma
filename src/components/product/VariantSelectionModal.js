@@ -149,23 +149,18 @@ export default function VariantSelectionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-end sm:items-center justify-center min-h-screen px-0 sm:px-4 pt-0 pb-0 sm:pb-20 text-center sm:block sm:p-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4">
+      <div className="flex items-end sm:items-center justify-center w-full h-full sm:h-auto">
         {/* Background overlay */}
         <div 
-          className="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75 backdrop-blur-sm"
+          className="fixed inset-0 transition-opacity bg-white-900 bg-opacity-75 backdrop-blur-sm"
           onClick={onClose}
           aria-hidden="true"
         />
 
-        {/* Center alignment trick */}
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">
-          &#8203;
-        </span>
-
         {/* Modal panel - Mobile optimized with proper scrolling */}
         <div 
-          className="inline-block w-full sm:max-w-4xl sm:my-8 overflow-hidden text-left align-bottom sm:align-middle transition-all transform bg-white shadow-xl sm:rounded-2xl rounded-t-3xl relative z-10 h-screen sm:h-auto sm:max-h-[90vh] flex flex-col"
+          className="w-full sm:max-w-4xl overflow-hidden text-left transition-all transform bg-white shadow-xl sm:rounded-2xl rounded-t-3xl relative z-10 h-screen sm:h-auto max-h-screen sm:max-h-[90vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header - Sticky on top */}
